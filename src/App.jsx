@@ -5,23 +5,9 @@ import { Card, CardContent } from "./components";
 import { SettingsModal, SettingsButton } from "./components";
 import { motion, AnimatePresence } from "framer-motion";
 
-const defaultCameras = [
-  { id: crypto.randomUUID(), name: "Câmera 01", location: "" },
-  { id: crypto.randomUUID(), name: "Câmera 02", location: "" },
-  { id: crypto.randomUUID(), name: "Câmera 03", location: "" },
-];
+const defaultCameras = [];
 
-const defaultEquipments = [
-  {
-    id: crypto.randomUUID(),
-    type: "DVR",
-    name: "DVR 01",
-    location: "",
-    ip: "",
-    adminUser: "",
-    adminPassword: "",
-  },
-];
+const defaultEquipments = [];
 
 const defaultSettings = {
   theme: "light",
@@ -100,12 +86,12 @@ function readFileAsDataUrl(file) {
 export default function CameraChecklistApp() {
   const [inspectionDate, setInspectionDate] = useState(today);
   const [inspector, setInspector] = useState("");
-  const [siteName, setSiteName] = useState("Minha infraestrutura");
+  const [siteName, setSiteName] = useState("");
   const [equipments, setEquipments] = useState(defaultEquipments);
   const [cameras, setCameras] = useState(
     defaultCameras.map((cam) => ({
       ...cam,
-      equipmentId: defaultEquipments[0]?.id || "",
+      equipmentId: "",
       angle: "pending",
       imagePercent: "pending",
       offline: "pending",
@@ -230,7 +216,7 @@ export default function CameraChecklistApp() {
         id: crypto.randomUUID(),
         name: `Câmera ${String(prev.length + 1).padStart(2, "0")}`,
         location: "",
-        equipmentId: equipments[0]?.id || "",
+        equipmentId: "",
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -673,7 +659,7 @@ export default function CameraChecklistApp() {
     }
     const template = repairSavedData(JSON.parse(saved));
     const templateEquipments = Array.isArray(template)
-      ? defaultEquipments.map((equipment) => ({ ...equipment, id: crypto.randomUUID() }))
+      ? []
       : (template.equipments || []).map((equipment, index) => ({
           id: equipment.id || crypto.randomUUID(),
           type: equipment.type || "DVR",
