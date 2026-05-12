@@ -211,7 +211,6 @@ export default function CameraChecklistApp() {
 
   function addCamera() {
     setCameras((prev) => [
-      ...prev,
       {
         id: crypto.randomUUID(),
         name: `Câmera ${String(prev.length + 1).padStart(2, "0")}`,
@@ -225,6 +224,7 @@ export default function CameraChecklistApp() {
         images: [],
         openImages: false,
       },
+      ...prev,
     ]);
   }
 
