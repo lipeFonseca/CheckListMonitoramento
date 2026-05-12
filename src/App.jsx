@@ -271,6 +271,18 @@ export default function CameraChecklistApp() {
     );
   }
 
+  function handleObservationPaste(id, event) {
+    const imageFiles = Array.from(event.clipboardData?.items || [])
+      .filter((item) => item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter(Boolean);
+
+    if (!imageFiles.length) return;
+
+    event.preventDefault();
+    handleImages(id, imageFiles);
+  }
+
   function removeImage(cameraId, imageId) {
     setCameras((prev) =>
       prev.map((cam) =>
@@ -1066,8 +1078,12 @@ export default function CameraChecklistApp() {
                         className={`${fieldClass} min-h-20`}
                         value={cam.notes}
                         onChange={(e) => updateCamera(cam.id, { notes: e.target.value })}
+                        onPaste={(e) => handleObservationPaste(cam.id, e)}
                         placeholder="Ex: imagem pegando muita parede, câmera sem sinal, ângulo incorreto..."
                       />
+                      <span className="theme-muted block text-xs">
+                        Você também pode colar imagens aqui para anexá-las à câmera.
+                      </span>
                     </label>
 
                     <div
