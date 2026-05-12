@@ -313,7 +313,7 @@ export default function CameraChecklistApp() {
         imagePercent: compliant ? "OK" : statusLabel(cam.imagePercent),
         wallPercent: cam.wallPercent ? `${cam.wallPercent}%` : "Não informado",
         offline: compliant ? "OK" : statusLabel(cam.offline),
-        notes: compliant ? "OK" : cam.notes || "Sem observação",
+        notes: cam.notes || (compliant ? "OK" : "Sem observação"),
         images: cam.images.length,
       };
     });
@@ -456,11 +456,12 @@ export default function CameraChecklistApp() {
               .badge { border-radius: 999px; display: inline-block; font-size: 9px; font-weight: 800; padding: 4px 8px; white-space: nowrap; }
               .ok { background: #dcfce7; color: #047857; }
               .nok { background: #fee2e2; color: #b91c1c; }
-              .camera-block { margin-bottom: 14px; padding: 14px; page-break-inside: avoid; }
+              .detail-list { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+              .camera-block { padding: 14px; page-break-inside: avoid; }
               .camera-title { align-items: center; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
               .camera-title h3 { font-size: 13px; margin: 0; }
               .camera-meta { color: #334155; display: grid; gap: 5px; font-size: 12px; margin-bottom: 10px; }
-              .images { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+              .images { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
               .images img { border: 1px solid #e2e8f0; border-radius: 8px; height: 105px; object-fit: cover; width: 100%; }
               .empty-images { color: #94a3b8; font-size: 11px; padding-top: 2px; }
               .equipment-list { display: grid; gap: 10px; grid-template-columns: 1fr; margin-bottom: 22px; }
@@ -570,34 +571,36 @@ export default function CameraChecklistApp() {
               </table>
 
               <h2 class="section-title">Detalhamento com imagens</h2>
-              ${cameras
-                .map((cam) => {
-                  const compliant = cameraIsCompliant(cam);
-                  return `
-                    <article class="camera-block">
-                      <div class="camera-title">
-                        <h3>${escapeHtml(cam.name)}</h3>
-                        <span class="badge ${compliant ? "ok" : "nok"}">${compliant ? "OK" : "NÃO CONFORME"}</span>
-                      </div>
-                      <div class="camera-meta">
-                        <div><strong>Localização:</strong> ${escapeHtml(cam.location || "Não informado")}</div>
-                        <div><strong>DVR/NVR:</strong> ${escapeHtml(equipmentLabel(cam.equipmentId))}</div>
-                        <div><strong>IP:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.ip || "Não informado")}</div>
-                        <div><strong>Usuário admin:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminUser || "Não informado")}</div>
-                        <div><strong>Senha:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminPassword || "Não informado")}</div>
-                        <div><strong>Observações:</strong> ${escapeHtml(compliant ? "OK" : cam.notes || "Sem observação")}</div>
-                      </div>
-                      ${
-                        cam.images.length
-                          ? `<div class="images">${cam.images
-                              .map((img) => `<img src="${img.src}" alt="${escapeHtml(img.name)}" />`)
-                              .join("")}</div>`
-                          : `<div class="empty-images">Nenhuma imagem anexada.</div>`
-                      }
-                    </article>
-                  `;
-                })
-                .join("")}
+              <section class="detail-list">
+                ${cameras
+                  .map((cam) => {
+                    const compliant = cameraIsCompliant(cam);
+                    return `
+                      <article class="camera-block">
+                        <div class="camera-title">
+                          <h3>${escapeHtml(cam.name)}</h3>
+                          <span class="badge ${compliant ? "ok" : "nok"}">${compliant ? "OK" : "NÃO CONFORME"}</span>
+                        </div>
+                        <div class="camera-meta">
+                          <div><strong>Localização:</strong> ${escapeHtml(cam.location || "Não informado")}</div>
+                          <div><strong>DVR/NVR:</strong> ${escapeHtml(equipmentLabel(cam.equipmentId))}</div>
+                          <div><strong>IP:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.ip || "Não informado")}</div>
+                          <div><strong>Usuário admin:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminUser || "Não informado")}</div>
+                          <div><strong>Senha:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminPassword || "Não informado")}</div>
+                          <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
+                        </div>
+                        ${
+                          cam.images.length
+                            ? `<div class="images">${cam.images
+                                .map((img) => `<img src="${img.src}" alt="${escapeHtml(img.name)}" />`)
+                                .join("")}</div>`
+                            : `<div class="empty-images">Nenhuma imagem anexada.</div>`
+                        }
+                      </article>
+                    `;
+                  })
+                  .join("")}
+              </section>
 
               <h2 class="section-title">Câmeras fora de uso</h2>
               <section class="unused-list">
