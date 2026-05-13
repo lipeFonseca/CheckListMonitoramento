@@ -9,6 +9,21 @@ const defaultCameras = [];
 
 const defaultEquipments = [];
 
+const defaultStatusOptions = [
+  {
+    id: crypto.randomUUID(),
+    label: "Câmera OK, não há necessidade de intervenção",
+  },
+  {
+    id: crypto.randomUUID(),
+    label: "Câmera funcional, recomenda-se ajustar o apontamento",
+  },
+  {
+    id: crypto.randomUUID(),
+    label: "Câmera sem sinal",
+  },
+];
+
 const defaultSettings = {
   theme: "light",
   logo: null,
@@ -133,6 +148,7 @@ function createCameraState(cam, index = 0) {
     name: cam.name || `Câmera ${String(index + 1).padStart(2, "0")}`,
     location: cam.location || "",
     equipmentId: cam.equipmentId || "",
+    statusOptionId: cam.statusOptionId || "",
     angle: "pending",
     imagePercent: "pending",
     offline: "pending",
@@ -151,6 +167,7 @@ function loadStoredInventory() {
         equipments: defaultEquipments,
         cameras: defaultCameras.map(createCameraState),
         unusedCameras: [],
+        statusOptions: defaultStatusOptions,
       };
     }
 
@@ -183,6 +200,13 @@ function loadStoredInventory() {
         previousSector: cam.previousSector || "",
         reason: cam.reason || "",
       })),
+      statusOptions:
+        Array.isArray(parsed.statusOptions)
+          ? parsed.statusOptions.map((status, index) => ({
+              id: status.id || crypto.randomUUID(),
+              label: status.label || `Status ${index + 1}`,
+            }))
+          : defaultStatusOptions,
     };
   } catch (error) {
     console.error("Erro ao carregar cadastro:", error);
@@ -190,11 +214,12 @@ function loadStoredInventory() {
       equipments: defaultEquipments,
       cameras: defaultCameras.map(createCameraState),
       unusedCameras: [],
+      statusOptions: defaultStatusOptions,
     };
   }
 }
 
-function getInventorySnapshot(equipments, cameras, unusedCameras) {
+function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions) {
   return {
     equipments: equipments.map(({ id, type, name, location, ip, adminUser, adminPassword }) => ({
       id,
@@ -205,11 +230,12 @@ function getInventorySnapshot(equipments, cameras, unusedCameras) {
       adminUser,
       adminPassword,
     })),
-    cameras: cameras.map(({ id, name, location, equipmentId }) => ({
+    cameras: cameras.map(({ id, name, location, equipmentId, statusOptionId }) => ({
       id,
       name,
       location,
       equipmentId,
+      statusOptionId,
     })),
     unusedCameras: unusedCameras.map(({ id, name, previousSector, reason }) => ({
       id,
@@ -217,6 +243,7 @@ function getInventorySnapshot(equipments, cameras, unusedCameras) {
       previousSector,
       reason,
     })),
+    statusOptions: statusOptions.map(({ id, label }) => ({ id, label })),
   };
 }
 
@@ -242,6 +269,7 @@ export default function CameraChecklistApp() {
   const [equipments, setEquipments] = useState(initialInventory.equipments);
   const [cameras, setCameras] = useState(initialInventory.cameras);
   const [unusedCameras, setUnusedCameras] = useState(initialInventory.unusedCameras);
+  const [statusOptions, setStatusOptions] = useState(initialInventory.statusOptions);
   const [settings, setSettings] = useState(loadStoredSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -313,12 +341,12 @@ export default function CameraChecklistApp() {
     try {
       localStorage.setItem(
         INVENTORY_STORAGE_KEY,
-        JSON.stringify(getInventorySnapshot(equipments, cameras, unusedCameras))
+        JSON.stringify(getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions))
       );
     } catch (error) {
       console.error("Erro ao salvar cadastro:", error);
     }
-  }, [equipments, cameras, unusedCameras]);
+  }, [equipments, cameras, unusedCameras, statusOptions]);
 
   const summary = useMemo(() => {
     const total = cameras.length;
@@ -360,6 +388,11 @@ export default function CameraChecklistApp() {
     if (!equipment) return "Sem DVR/NVR";
 
     return `${equipment.type} - ${equipment.name}${equipment.location ? ` (${equipment.location})` : ""}`;
+  }
+
+  function statusOptionLabel(statusOptionId) {
+    const option = statusOptions.find((status) => status.id === statusOptionId);
+    return option?.label || "";
   }
 
   function updateCamera(id, patch) {
@@ -404,6 +437,7 @@ export default function CameraChecklistApp() {
         name: `Câmera ${String(prev.length + 1).padStart(2, "0")}`,
         location: "",
         equipmentId,
+        statusOptionId: "",
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -422,6 +456,29 @@ export default function CameraChecklistApp() {
 
   function updateUnusedCamera(id, patch) {
     setUnusedCameras((prev) => prev.map((cam) => (cam.id === id ? { ...cam, ...patch } : cam)));
+  }
+
+  function updateStatusOption(id, label) {
+    setStatusOptions((prev) =>
+      prev.map((status) => (status.id === id ? { ...status, label } : status))
+    );
+  }
+
+  function addStatusOption() {
+    setStatusOptions((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        label: `Novo status ${String(prev.length + 1).padStart(2, "0")}`,
+      },
+    ]);
+  }
+
+  function removeStatusOption(id) {
+    setStatusOptions((prev) => prev.filter((status) => status.id !== id));
+    setCameras((prev) =>
+      prev.map((cam) => (cam.statusOptionId === id ? { ...cam, statusOptionId: "" } : cam))
+    );
   }
 
   function addUnusedCamera() {
@@ -496,6 +553,7 @@ export default function CameraChecklistApp() {
         equipmentIp: equipment?.ip || "Não informado",
         equipmentAdminUser: equipment?.adminUser || "Não informado",
         equipmentAdminPassword: equipment?.adminPassword || "Não informado",
+        customStatus: statusOptionLabel(cam.statusOptionId) || "Não selecionado",
         status: compliant ? "OK" : "NÃO CONFORME",
         angle: compliant ? "OK" : statusLabel(cam.angle),
         imagePercent: compliant ? "OK" : statusLabel(cam.imagePercent),
@@ -520,6 +578,7 @@ export default function CameraChecklistApp() {
       "IP DVR/NVR",
       "Usuário admin",
       "Senha",
+      "Status pronto",
       "Status Geral",
       "Ângulo correto",
       "% de imagem / parede",
@@ -543,6 +602,7 @@ export default function CameraChecklistApp() {
           row.equipmentIp,
           row.equipmentAdminUser,
           row.equipmentAdminPassword,
+          row.customStatus,
           row.status,
           row.angle,
           row.imagePercent,
@@ -566,6 +626,7 @@ export default function CameraChecklistApp() {
           cam.name,
           cam.previousSector || "Não informado",
           "Não atribuído",
+          "Não aplicado",
           "Não aplicado",
           "Não aplicado",
           "Não aplicado",
@@ -729,6 +790,7 @@ export default function CameraChecklistApp() {
                     <th>DVR/NVR</th>
                     <th>IP</th>
                     <th>Admin</th>
+                    <th>Status pronto</th>
                     <th>Status</th>
                     <th>Ângulo</th>
                     <th>% Imagem</th>
@@ -746,6 +808,7 @@ export default function CameraChecklistApp() {
                           <td>${escapeHtml(row.equipment)}</td>
                           <td>${escapeHtml(row.equipmentIp)}</td>
                           <td>${escapeHtml(row.equipmentAdminUser)}</td>
+                          <td>${escapeHtml(row.customStatus)}</td>
                           <td><span class="badge ${row.status === "OK" ? "ok" : "nok"}">${escapeHtml(row.status)}</span></td>
                           <td>${escapeHtml(row.angle)}</td>
                           <td>${escapeHtml(row.imagePercent)} - ${escapeHtml(row.wallPercent)}</td>
@@ -775,6 +838,7 @@ export default function CameraChecklistApp() {
                           <div><strong>IP:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.ip || "Não informado")}</div>
                           <div><strong>Usuário admin:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminUser || "Não informado")}</div>
                           <div><strong>Senha:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminPassword || "Não informado")}</div>
+                          <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabel(cam.statusOptionId) || "Não selecionado")}</div>
                           <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
                         </div>
                         ${
@@ -843,12 +907,18 @@ export default function CameraChecklistApp() {
         adminUser,
         adminPassword,
       })),
-      cameras: cameras.map(({ name, location, equipmentId }) => ({ name, location, equipmentId })),
+      cameras: cameras.map(({ name, location, equipmentId, statusOptionId }) => ({
+        name,
+        location,
+        equipmentId,
+        statusOptionId,
+      })),
       unusedCameras: unusedCameras.map(({ name, previousSector, reason }) => ({
         name,
         previousSector,
         reason,
       })),
+      statusOptions: statusOptions.map(({ id, label }) => ({ id, label })),
     };
     localStorage.setItem("cameraChecklistTemplate", JSON.stringify(template));
     alert("Modelo salvo no navegador para próximas verificações.");
@@ -874,10 +944,20 @@ export default function CameraChecklistApp() {
         }));
     const safeEquipments = templateEquipments.length ? templateEquipments : [];
     const validEquipmentIds = new Set(safeEquipments.map((equipment) => equipment.id));
+    const templateStatusOptions = Array.isArray(template)
+      ? defaultStatusOptions
+      : Array.isArray(template.statusOptions)
+        ? template.statusOptions.map((status, index) => ({
+            id: status.id || crypto.randomUUID(),
+            label: status.label || `Status ${index + 1}`,
+          }))
+        : defaultStatusOptions;
+    const validStatusOptionIds = new Set(templateStatusOptions.map((status) => status.id));
     const templateCameras = Array.isArray(template) ? template : template.cameras || [];
 
     setEquipments(safeEquipments);
     setSelectedEquipmentId(safeEquipments[0]?.id || "");
+    setStatusOptions(templateStatusOptions);
     setCameras(
       templateCameras.map((cam) => ({
         id: crypto.randomUUID(),
@@ -886,6 +966,7 @@ export default function CameraChecklistApp() {
         equipmentId: validEquipmentIds.has(cam.equipmentId)
           ? cam.equipmentId
           : safeEquipments[0]?.id || "",
+        statusOptionId: validStatusOptionIds.has(cam.statusOptionId) ? cam.statusOptionId : "",
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -1016,6 +1097,54 @@ export default function CameraChecklistApp() {
                 placeholder="Nome"
               />
             </label>
+          </CardContent>
+        </Card>
+
+        <Card className="theme-panel rounded-2xl">
+          <CardContent className="space-y-4 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Status prontos</h2>
+                <p className="theme-muted text-sm">
+                  Cadastre textos rápidos para aplicar no status das câmeras.
+                </p>
+              </div>
+              <Button onClick={addStatusOption} variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar status
+              </Button>
+            </div>
+
+            {statusOptions.length ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {statusOptions.map((status) => (
+                  <div key={status.id} className="theme-subpanel rounded-2xl border p-3">
+                    <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                      <label className="space-y-1">
+                        <span className={labelClass}>Texto do status</span>
+                        <input
+                          className={fieldClass}
+                          value={status.label}
+                          onChange={(e) => updateStatusOption(status.id, e.target.value)}
+                          placeholder="Ex: Câmera funcional, recomenda-se ajustar o apontamento"
+                        />
+                      </label>
+                      <button
+                        className="btn-ghost flex h-10 items-center justify-center rounded-lg px-3"
+                        onClick={() => removeStatusOption(status.id)}
+                        title="Remover status"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="theme-subpanel rounded-2xl border p-4 text-sm theme-muted">
+                Nenhum status pronto cadastrado.
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1200,6 +1329,24 @@ export default function CameraChecklistApp() {
                         {compliant ? "OK" : "Verificar"}
                       </div>
                     </div>
+
+                    <label className="block space-y-1">
+                      <span className={labelClass}>Status da câmera</span>
+                      <select
+                        className={fieldClass}
+                        value={cam.statusOptionId || ""}
+                        onChange={(e) =>
+                          updateCamera(cam.id, { statusOptionId: e.target.value })
+                        }
+                      >
+                        <option value="">Selecione um status pronto</option>
+                        {statusOptions.map((status) => (
+                          <option key={status.id} value={status.id}>
+                            {status.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
                     <div className="grid gap-3 md:grid-cols-4">
                       <ChecklistSelect
