@@ -678,7 +678,6 @@ export default function CameraChecklistApp() {
 
   async function exportPDF() {
     try {
-      const rows = buildReportRows();
       const escapeHtml = (value) =>
         String(value ?? "")
           .replaceAll("&", "&amp;")
@@ -804,46 +803,6 @@ export default function CameraChecklistApp() {
                     : `<div class="empty-images">Nenhum DVR/NVR cadastrado.</div>`
                 }
               </section>
-
-              <h2 class="section-title">Resumo das câmeras</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Câmera</th>
-                    <th>Localização</th>
-                    <th>DVR/NVR</th>
-                    <th>IP</th>
-                    <th>Admin</th>
-                    <th>Status pronto</th>
-                    <th>Status</th>
-                    <th>Ângulo</th>
-                    <th>% Imagem</th>
-                    <th>Funcionamento</th>
-                    <th>Observações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${rows
-                    .map(
-                      (row) => `
-                        <tr>
-                          <td><strong>${escapeHtml(row.camera)}</strong></td>
-                          <td>${escapeHtml(row.location)}</td>
-                          <td>${escapeHtml(row.equipment)}</td>
-                          <td>${escapeHtml(row.equipmentIp)}</td>
-                          <td>${escapeHtml(row.equipmentAdminUser)}</td>
-                          <td>${escapeHtml(row.customStatus)}</td>
-                          <td><span class="badge ${row.status === "OK" ? "ok" : "nok"}">${escapeHtml(row.status)}</span></td>
-                          <td>${escapeHtml(row.angle)}</td>
-                          <td>${escapeHtml(row.imagePercent)} - ${escapeHtml(row.wallPercent)}</td>
-                          <td>${escapeHtml(row.offline)}</td>
-                          <td>${escapeHtml(row.notes)}</td>
-                        </tr>
-                      `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
 
               <h2 class="section-title">Detalhamento com imagens</h2>
               <section class="detail-list">
