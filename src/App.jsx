@@ -22,6 +22,9 @@ const defaultSettings = {
 
 const today = new Date().toISOString().slice(0, 10);
 const SETTINGS_STORAGE_KEY = "cameraChecklistSettings";
+const SETTINGS_IMAGE_DB = "cameraChecklistImageSettings";
+const SETTINGS_IMAGE_STORE = "settings";
+const SETTINGS_IMAGE_KEY = "images";
 
 function repairLegacyText(value) {
   if (typeof value !== "string") return value;
@@ -69,6 +72,60 @@ function loadStoredSettings() {
   }
 }
 
+function openSettingsImageDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SETTINGS_IMAGE_DB, 1);
+
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(SETTINGS_IMAGE_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function loadStoredImageSettings() {
+  try {
+    const db = await openSettingsImageDb();
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(SETTINGS_IMAGE_STORE, "readonly");
+      const store = transaction.objectStore(SETTINGS_IMAGE_STORE);
+      const request = store.get(SETTINGS_IMAGE_KEY);
+
+      request.onsuccess = () => resolve(request.result || {});
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => db.close();
+    });
+  } catch (error) {
+    console.error("Erro ao carregar imagens das configurações:", error);
+    return {};
+  }
+}
+
+async function saveStoredImageSettings(images) {
+  const db = await openSettingsImageDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SETTINGS_IMAGE_STORE, "readwrite");
+    const store = transaction.objectStore(SETTINGS_IMAGE_STORE);
+    const request = store.put(images, SETTINGS_IMAGE_KEY);
+
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
+  });
+}
+
+function getSettingsMetadata(settings) {
+  const { logo, headerImage, favicon, ...metadata } = settings;
+  return metadata;
+}
+
 function statusLabel(value) {
   if (value === "ok") return "OK";
   if (value === "nok") return "Não conforme";
@@ -103,20 +160,30 @@ export default function CameraChecklistApp() {
   );
   const [unusedCameras, setUnusedCameras] = useState([]);
   const [settings, setSettings] = useState(loadStoredSettings);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const fileInputRefs = useRef({});
 
-  // Carregar configurações do localStorage ao iniciar
+  // Carregar configurações e imagens persistidas ao iniciar
   useEffect(() => {
-    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (savedSettings) {
-      try {
-        setSettings({ ...defaultSettings, ...repairSavedData(JSON.parse(savedSettings)) });
-      } catch (e) {
-        console.error("Erro ao carregar configurações:", e);
-      }
+    let active = true;
+
+    async function loadSettings() {
+      const storedSettings = loadStoredSettings();
+      const storedImages = await loadStoredImageSettings();
+
+      if (!active) return;
+
+      setSettings({ ...storedSettings, ...storedImages });
+      setSettingsReady(true);
     }
+
+    loadSettings();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Aplicar tema ao documento
@@ -140,13 +207,23 @@ export default function CameraChecklistApp() {
 
   // Salvar configurações no localStorage
   useEffect(() => {
+    if (!settingsReady) return;
+
     try {
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(getSettingsMetadata(settings)));
+      saveStoredImageSettings({
+        logo: settings.logo,
+        headerImage: settings.headerImage,
+        favicon: settings.favicon,
+      }).catch((error) => {
+        console.error("Erro ao salvar imagens das configurações:", error);
+        alert("Não foi possível salvar as imagens. Tente usar arquivos menores.");
+      });
     } catch (e) {
       console.error("Erro ao salvar configurações:", e);
-      alert("Não foi possível salvar as configurações. Tente usar imagens menores para logo/capa.");
+      alert("Não foi possível salvar as configurações.");
     }
-  }, [settings]);
+  }, [settings, settingsReady]);
 
   const summary = useMemo(() => {
     const total = cameras.length;
