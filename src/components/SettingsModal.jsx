@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Check, Image, Moon, Settings, Sun, X } from "lucide-react";
+import { Check, Image, Moon, Plus, Settings, Sun, Trash2, X } from "lucide-react";
 import { Button } from "./index";
 
 function readFileAsDataUrl(file) {
@@ -39,7 +39,16 @@ function resizeImageFile(file, maxWidth, maxHeight, quality = 0.84, mimeType = "
   });
 }
 
-export function SettingsModal({ isOpen, onClose, settings, onSettingsChange }) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  settings,
+  onSettingsChange,
+  statusOptions = [],
+  onAddStatusOption,
+  onUpdateStatusOption,
+  onRemoveStatusOption,
+}) {
   const [logoPreview, setLogoPreview] = useState(settings.logo);
   const [headerImagePreview, setHeaderImagePreview] = useState(settings.headerImage);
   const [faviconPreview, setFaviconPreview] = useState(settings.favicon);
@@ -285,6 +294,51 @@ export function SettingsModal({ isOpen, onClose, settings, onSettingsChange }) {
                 />
               ))}
             </div>
+          </div>
+
+          <div className="theme-subpanel rounded-xl border p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold">Status prontos</h3>
+                <p className="theme-muted text-xs">
+                  Textos que podem ser marcados em cada câmera.
+                </p>
+              </div>
+              <button
+                onClick={onAddStatusOption}
+                className="btn-outline inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar
+              </button>
+            </div>
+
+            {statusOptions.length ? (
+              <div className="space-y-2">
+                {statusOptions.map((status) => (
+                  <div
+                    key={status.id}
+                    className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center"
+                  >
+                    <input
+                      className="theme-field w-full rounded-lg border px-3 py-2 text-sm"
+                      value={status.label}
+                      onChange={(e) => onUpdateStatusOption?.(status.id, e.target.value)}
+                      placeholder="Ex: Câmera ok, não será necessária intervenção"
+                    />
+                    <button
+                      className="btn-ghost inline-flex h-9 items-center justify-center rounded-lg px-3"
+                      onClick={() => onRemoveStatusOption?.(status.id)}
+                      title="Remover status"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="theme-muted text-sm">Nenhum status pronto cadastrado.</p>
+            )}
           </div>
 
           <div>

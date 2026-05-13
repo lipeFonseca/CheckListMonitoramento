@@ -1083,6 +1083,10 @@ export default function CameraChecklistApp() {
           onClose={() => setShowSettings(false)}
           settings={settings}
           onSettingsChange={setSettings}
+          statusOptions={statusOptions}
+          onAddStatusOption={addStatusOption}
+          onUpdateStatusOption={updateStatusOption}
+          onRemoveStatusOption={removeStatusOption}
         />
 
         <div className="grid gap-4 md:grid-cols-5">
@@ -1125,54 +1129,6 @@ export default function CameraChecklistApp() {
                 placeholder="Nome"
               />
             </label>
-          </CardContent>
-        </Card>
-
-        <Card className="theme-panel rounded-2xl">
-          <CardContent className="space-y-4 p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-xl font-bold">Status prontos</h2>
-                <p className="theme-muted text-sm">
-                  Cadastre textos rápidos para aplicar no status das câmeras.
-                </p>
-              </div>
-              <Button onClick={addStatusOption} variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar status
-              </Button>
-            </div>
-
-            {statusOptions.length ? (
-              <div className="grid gap-3 lg:grid-cols-2">
-                {statusOptions.map((status) => (
-                  <div key={status.id} className="theme-subpanel rounded-2xl border p-3">
-                    <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                      <label className="space-y-1">
-                        <span className={labelClass}>Texto do status</span>
-                        <input
-                          className={fieldClass}
-                          value={status.label}
-                          onChange={(e) => updateStatusOption(status.id, e.target.value)}
-                          placeholder="Ex: Câmera funcional, recomenda-se ajustar o apontamento"
-                        />
-                      </label>
-                      <button
-                        className="btn-ghost flex h-10 items-center justify-center rounded-lg px-3"
-                        onClick={() => removeStatusOption(status.id)}
-                        title="Remover status"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="theme-subpanel rounded-2xl border p-4 text-sm theme-muted">
-                Nenhum status pronto cadastrado.
-              </div>
-            )}
           </CardContent>
         </Card>
 
