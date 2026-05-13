@@ -22,6 +22,7 @@ const defaultSettings = {
 
 const today = new Date().toISOString().slice(0, 10);
 const SETTINGS_STORAGE_KEY = "cameraChecklistSettings";
+const INVENTORY_STORAGE_KEY = "cameraChecklistInventory";
 const SETTINGS_IMAGE_DB = "cameraChecklistImageSettings";
 const SETTINGS_IMAGE_STORE = "settings";
 const SETTINGS_IMAGE_KEY = "images";
@@ -126,6 +127,99 @@ function getSettingsMetadata(settings) {
   return metadata;
 }
 
+function createCameraState(cam, index = 0) {
+  return {
+    id: cam.id || crypto.randomUUID(),
+    name: cam.name || `Câmera ${String(index + 1).padStart(2, "0")}`,
+    location: cam.location || "",
+    equipmentId: cam.equipmentId || "",
+    angle: "pending",
+    imagePercent: "pending",
+    offline: "pending",
+    wallPercent: "",
+    notes: "",
+    images: [],
+    openImages: false,
+  };
+}
+
+function loadStoredInventory() {
+  try {
+    const savedInventory = localStorage.getItem(INVENTORY_STORAGE_KEY);
+    if (!savedInventory) {
+      return {
+        equipments: defaultEquipments,
+        cameras: defaultCameras.map(createCameraState),
+        unusedCameras: [],
+      };
+    }
+
+    const parsed = repairSavedData(JSON.parse(savedInventory));
+    const equipments = (parsed.equipments || []).map((equipment, index) => ({
+      id: equipment.id || crypto.randomUUID(),
+      type: equipment.type || "DVR",
+      name: equipment.name || `DVR/NVR ${String(index + 1).padStart(2, "0")}`,
+      location: equipment.location || "",
+      ip: equipment.ip || "",
+      adminUser: equipment.adminUser || "",
+      adminPassword: equipment.adminPassword || "",
+    }));
+    const validEquipmentIds = new Set(equipments.map((equipment) => equipment.id));
+
+    return {
+      equipments,
+      cameras: (parsed.cameras || []).map((cam, index) =>
+        createCameraState(
+          {
+            ...cam,
+            equipmentId: validEquipmentIds.has(cam.equipmentId) ? cam.equipmentId : "",
+          },
+          index
+        )
+      ),
+      unusedCameras: (parsed.unusedCameras || []).map((cam, index) => ({
+        id: cam.id || crypto.randomUUID(),
+        name: cam.name || `Câmera fora de uso ${String(index + 1).padStart(2, "0")}`,
+        previousSector: cam.previousSector || "",
+        reason: cam.reason || "",
+      })),
+    };
+  } catch (error) {
+    console.error("Erro ao carregar cadastro:", error);
+    return {
+      equipments: defaultEquipments,
+      cameras: defaultCameras.map(createCameraState),
+      unusedCameras: [],
+    };
+  }
+}
+
+function getInventorySnapshot(equipments, cameras, unusedCameras) {
+  return {
+    equipments: equipments.map(({ id, type, name, location, ip, adminUser, adminPassword }) => ({
+      id,
+      type,
+      name,
+      location,
+      ip,
+      adminUser,
+      adminPassword,
+    })),
+    cameras: cameras.map(({ id, name, location, equipmentId }) => ({
+      id,
+      name,
+      location,
+      equipmentId,
+    })),
+    unusedCameras: unusedCameras.map(({ id, name, previousSector, reason }) => ({
+      id,
+      name,
+      previousSector,
+      reason,
+    })),
+  };
+}
+
 function statusLabel(value) {
   if (value === "ok") return "OK";
   if (value === "nok") return "Não conforme";
@@ -141,27 +235,17 @@ function readFileAsDataUrl(file) {
 }
 
 export default function CameraChecklistApp() {
+  const initialInventory = useMemo(() => loadStoredInventory(), []);
   const [inspectionDate, setInspectionDate] = useState(today);
   const [inspector, setInspector] = useState("");
   const [siteName, setSiteName] = useState("");
-  const [equipments, setEquipments] = useState(defaultEquipments);
-  const [cameras, setCameras] = useState(
-    defaultCameras.map((cam) => ({
-      ...cam,
-      equipmentId: "",
-      angle: "pending",
-      imagePercent: "pending",
-      offline: "pending",
-      wallPercent: "",
-      notes: "",
-      images: [],
-      openImages: false,
-    }))
-  );
-  const [unusedCameras, setUnusedCameras] = useState([]);
+  const [equipments, setEquipments] = useState(initialInventory.equipments);
+  const [cameras, setCameras] = useState(initialInventory.cameras);
+  const [unusedCameras, setUnusedCameras] = useState(initialInventory.unusedCameras);
   const [settings, setSettings] = useState(loadStoredSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState("");
 
   const fileInputRefs = useRef({});
 
@@ -225,6 +309,17 @@ export default function CameraChecklistApp() {
     }
   }, [settings, settingsReady]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        INVENTORY_STORAGE_KEY,
+        JSON.stringify(getInventorySnapshot(equipments, cameras, unusedCameras))
+      );
+    } catch (error) {
+      console.error("Erro ao salvar cadastro:", error);
+    }
+  }, [equipments, cameras, unusedCameras]);
+
   const summary = useMemo(() => {
     const total = cameras.length;
     const compliant = cameras.filter(
@@ -238,6 +333,27 @@ export default function CameraChecklistApp() {
       equipments: equipments.length,
     };
   }, [cameras, equipments.length, unusedCameras.length]);
+
+  const selectedEquipment = useMemo(
+    () => equipments.find((equipment) => equipment.id === selectedEquipmentId) || null,
+    [equipments, selectedEquipmentId]
+  );
+
+  const selectedEquipmentCameras = useMemo(
+    () => cameras.filter((cam) => cam.equipmentId === selectedEquipmentId),
+    [cameras, selectedEquipmentId]
+  );
+
+  useEffect(() => {
+    if (!equipments.length) {
+      setSelectedEquipmentId("");
+      return;
+    }
+
+    if (!equipments.some((equipment) => equipment.id === selectedEquipmentId)) {
+      setSelectedEquipmentId(equipments[0].id);
+    }
+  }, [equipments, selectedEquipmentId]);
 
   function equipmentLabel(equipmentId) {
     const equipment = equipments.find((item) => item.id === equipmentId);
@@ -257,18 +373,21 @@ export default function CameraChecklistApp() {
   }
 
   function addEquipment() {
+    const newEquipment = {
+      id: crypto.randomUUID(),
+      type: "DVR",
+      name: `DVR/NVR ${String(equipments.length + 1).padStart(2, "0")}`,
+      location: "",
+      ip: "",
+      adminUser: "",
+      adminPassword: "",
+    };
+
     setEquipments((prev) => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        type: "DVR",
-        name: `DVR/NVR ${String(prev.length + 1).padStart(2, "0")}`,
-        location: "",
-        ip: "",
-        adminUser: "",
-        adminPassword: "",
-      },
+      newEquipment,
     ]);
+    setSelectedEquipmentId(newEquipment.id);
   }
 
   function removeEquipment(id) {
@@ -278,21 +397,13 @@ export default function CameraChecklistApp() {
     );
   }
 
-  function assignCameraToEquipment(cameraId, equipmentId, checked) {
-    setCameras((prev) =>
-      prev.map((cam) =>
-        cam.id === cameraId ? { ...cam, equipmentId: checked ? equipmentId : "" } : cam
-      )
-    );
-  }
-
-  function addCamera() {
+  function addCamera(equipmentId = selectedEquipmentId) {
     setCameras((prev) => [
       {
         id: crypto.randomUUID(),
         name: `Câmera ${String(prev.length + 1).padStart(2, "0")}`,
         location: "",
-        equipmentId: "",
+        equipmentId,
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -766,6 +877,7 @@ export default function CameraChecklistApp() {
     const templateCameras = Array.isArray(template) ? template : template.cameras || [];
 
     setEquipments(safeEquipments);
+    setSelectedEquipmentId(safeEquipments[0]?.id || "");
     setCameras(
       templateCameras.map((cam) => ({
         id: crypto.randomUUID(),
@@ -909,153 +1021,146 @@ export default function CameraChecklistApp() {
 
         <Card className="theme-panel rounded-2xl">
           <CardContent className="space-y-4 p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-xl font-bold">Equipamentos DVR/NVR</h2>
-                <p className="theme-muted text-sm">
-                  Cadastre os gravadores e atribua as câmeras a cada equipamento.
-                </p>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="grid flex-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <label className="space-y-1">
+                  <span className={labelClass}>DVR/NVR</span>
+                  <select
+                    className={fieldClass}
+                    value={selectedEquipmentId}
+                    onChange={(e) => setSelectedEquipmentId(e.target.value)}
+                  >
+                    <option value="">Selecione um dispositivo</option>
+                    {equipments.map((equipment) => (
+                      <option key={equipment.id} value={equipment.id}>
+                        {equipment.type} - {equipment.name || "Sem nome"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button onClick={addEquipment} variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar DVR/NVR
+                </Button>
               </div>
-              <Button onClick={addEquipment} variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar DVR/NVR
-              </Button>
             </div>
 
-            {equipments.length ? (
-              <div className="grid gap-3">
-                {equipments.map((equipment) => (
-                  <div key={equipment.id} className="theme-subpanel rounded-2xl border p-3">
-                    <div className="grid gap-3 md:grid-cols-[110px_1fr_1fr_1fr_auto] md:items-end">
-                      <label className="space-y-1">
-                        <span className={labelClass}>Tipo</span>
-                        <select
-                          className={fieldClass}
-                          value={equipment.type}
-                          onChange={(e) => updateEquipment(equipment.id, { type: e.target.value })}
-                        >
-                          <option value="DVR">DVR</option>
-                          <option value="NVR">NVR</option>
-                        </select>
-                      </label>
-                      <label className="space-y-1">
-                        <span className={labelClass}>Nome</span>
-                        <input
-                          className={fieldClass}
-                          value={equipment.name}
-                          onChange={(e) => updateEquipment(equipment.id, { name: e.target.value })}
-                          placeholder="Ex: DVR recepção"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className={labelClass}>Local</span>
-                        <input
-                          className={fieldClass}
-                          value={equipment.location}
-                          onChange={(e) =>
-                            updateEquipment(equipment.id, { location: e.target.value })
-                          }
-                          placeholder="Ex: Rack TI"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className={labelClass}>IP</span>
-                        <input
-                          className={fieldClass}
-                          value={equipment.ip}
-                          onChange={(e) => updateEquipment(equipment.id, { ip: e.target.value })}
-                          placeholder="Ex: 192.168.1.10"
-                        />
-                      </label>
-                      <button
-                        className="btn-ghost flex h-10 items-center justify-center rounded-lg px-3"
-                        onClick={() => removeEquipment(equipment.id)}
-                        title="Remover DVR/NVR"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+            {selectedEquipment ? (
+              <div className="space-y-4">
+                <div className="theme-subpanel rounded-2xl border p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold">Dados do dispositivo</h2>
+                      <p className="theme-muted text-sm">
+                        Edite as informações do DVR/NVR selecionado.
+                      </p>
                     </div>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1">
-                        <span className={labelClass}>Usuário admin</span>
-                        <input
-                          className={fieldClass}
-                          value={equipment.adminUser}
-                          onChange={(e) =>
-                            updateEquipment(equipment.id, { adminUser: e.target.value })
-                          }
-                          placeholder="Ex: admin"
-                        />
-                      </label>
-                      <label className="space-y-1">
-                        <span className={labelClass}>Senha</span>
-                        <input
-                          className={fieldClass}
-                          type="password"
-                          value={equipment.adminPassword}
-                          onChange={(e) =>
-                            updateEquipment(equipment.id, { adminPassword: e.target.value })
-                          }
-                          placeholder="Senha de acesso"
-                        />
-                      </label>
-                    </div>
-                    <p className="theme-muted mt-2 flex items-center gap-2 text-xs">
-                      <Server className="h-3.5 w-3.5" />
-                      {cameras.filter((cam) => cam.equipmentId === equipment.id).length} câmera(s)
-                      atribuída(s)
-                    </p>
-                    <div className="mt-3 rounded-xl border border-[var(--panel-border)] bg-[var(--panel-bg)] p-3">
-                      <p className="theme-label mb-2 text-sm font-medium">Câmeras atribuídas</p>
-                      {cameras.length ? (
-                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                          {cameras.map((cam) => (
-                            <label
-                              key={cam.id}
-                              className="theme-subpanel flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={cam.equipmentId === equipment.id}
-                                onChange={(e) =>
-                                  assignCameraToEquipment(cam.id, equipment.id, e.target.checked)
-                                }
-                                className="h-4 w-4 accent-[var(--accent-color)]"
-                              />
-                              <span className="min-w-0">
-                                <span className="block truncate font-medium">{cam.name}</span>
-                                <span className="theme-muted block truncate text-xs">
-                                  {cam.location || "Sem localização"}
-                                </span>
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="theme-muted text-sm">Nenhuma câmera cadastrada.</p>
-                      )}
-                    </div>
+                    <Button variant="ghost" onClick={() => removeEquipment(selectedEquipment.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir dispositivo
+                    </Button>
                   </div>
-                ))}
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-[110px_1fr_1fr_1fr]">
+                    <label className="space-y-1">
+                      <span className={labelClass}>Tipo</span>
+                      <select
+                        className={fieldClass}
+                        value={selectedEquipment.type}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { type: e.target.value })
+                        }
+                      >
+                        <option value="DVR">DVR</option>
+                        <option value="NVR">NVR</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>Nome</span>
+                      <input
+                        className={fieldClass}
+                        value={selectedEquipment.name}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { name: e.target.value })
+                        }
+                        placeholder="Ex: DVR recepção"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>Local</span>
+                      <input
+                        className={fieldClass}
+                        value={selectedEquipment.location}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { location: e.target.value })
+                        }
+                        placeholder="Ex: Rack TI"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>IP</span>
+                      <input
+                        className={fieldClass}
+                        value={selectedEquipment.ip}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { ip: e.target.value })
+                        }
+                        placeholder="Ex: 192.168.1.10"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className={labelClass}>Usuário admin</span>
+                      <input
+                        className={fieldClass}
+                        value={selectedEquipment.adminUser}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { adminUser: e.target.value })
+                        }
+                        placeholder="Ex: admin"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>Senha</span>
+                      <input
+                        className={fieldClass}
+                        type="password"
+                        value={selectedEquipment.adminPassword}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, {
+                            adminPassword: e.target.value,
+                          })
+                        }
+                        placeholder="Senha de acesso"
+                      />
+                    </label>
+                  </div>
+
+                  <p className="theme-muted mt-3 flex items-center gap-2 text-xs">
+                    <Server className="h-3.5 w-3.5" />
+                    {selectedEquipmentCameras.length} câmera(s) cadastrada(s) neste dispositivo
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={() => addCamera(selectedEquipment.id)} variant="outline">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar câmera neste dispositivo
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="theme-subpanel rounded-2xl border p-4 text-sm theme-muted">
-                Nenhum DVR/NVR cadastrado. As câmeras podem ficar sem atribuição até você adicionar
-                um equipamento.
+                Adicione ou selecione um DVR/NVR para cadastrar câmeras dentro dele.
               </div>
             )}
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button onClick={addCamera} variant="outline">
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar câmera
-          </Button>
-        </div>
-
         <div className="space-y-4">
-          {cameras.map((cam) => {
+          {selectedEquipmentCameras.map((cam) => {
             const compliant = cameraIsCompliant(cam);
             return (
               <motion.div
@@ -1066,7 +1171,7 @@ export default function CameraChecklistApp() {
                 <Card className="theme-panel rounded-2xl">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="grid flex-1 gap-3 md:grid-cols-3">
+                      <div className="grid flex-1 gap-3 md:grid-cols-2">
                         <label className="space-y-1">
                           <span className={labelClass}>Câmera</span>
                           <input
@@ -1085,23 +1190,6 @@ export default function CameraChecklistApp() {
                             }
                             placeholder="Ex: Entrada principal"
                           />
-                        </label>
-                        <label className="space-y-1">
-                          <span className={labelClass}>DVR/NVR</span>
-                          <select
-                            className={fieldClass}
-                            value={cam.equipmentId || ""}
-                            onChange={(e) =>
-                              updateCamera(cam.id, { equipmentId: e.target.value })
-                            }
-                          >
-                            <option value="">Sem atribuição</option>
-                            {equipments.map((equipment) => (
-                              <option key={equipment.id} value={equipment.id}>
-                                {equipment.type} - {equipment.name || "Sem nome"}
-                              </option>
-                            ))}
-                          </select>
                         </label>
                       </div>
                       <div
@@ -1250,6 +1338,13 @@ export default function CameraChecklistApp() {
               </motion.div>
             );
           })}
+          {selectedEquipment && !selectedEquipmentCameras.length && (
+            <Card className="theme-panel rounded-2xl">
+              <CardContent className="p-4 text-sm theme-muted">
+                Nenhuma câmera cadastrada neste dispositivo.
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <Card className="theme-panel rounded-2xl">
