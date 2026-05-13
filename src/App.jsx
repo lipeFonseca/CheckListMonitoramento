@@ -148,7 +148,11 @@ function createCameraState(cam, index = 0) {
     name: cam.name || `Câmera ${String(index + 1).padStart(2, "0")}`,
     location: cam.location || "",
     equipmentId: cam.equipmentId || "",
-    statusOptionId: cam.statusOptionId || "",
+    statusOptionIds: Array.isArray(cam.statusOptionIds)
+      ? cam.statusOptionIds
+      : cam.statusOptionId
+        ? [cam.statusOptionId]
+        : [],
     angle: "pending",
     imagePercent: "pending",
     offline: "pending",
@@ -230,12 +234,12 @@ function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions)
       adminUser,
       adminPassword,
     })),
-    cameras: cameras.map(({ id, name, location, equipmentId, statusOptionId }) => ({
+    cameras: cameras.map(({ id, name, location, equipmentId, statusOptionIds }) => ({
       id,
       name,
       location,
       equipmentId,
-      statusOptionId,
+      statusOptionIds,
     })),
     unusedCameras: unusedCameras.map(({ id, name, previousSector, reason }) => ({
       id,
@@ -390,9 +394,10 @@ export default function CameraChecklistApp() {
     return `${equipment.type} - ${equipment.name}${equipment.location ? ` (${equipment.location})` : ""}`;
   }
 
-  function statusOptionLabel(statusOptionId) {
-    const option = statusOptions.find((status) => status.id === statusOptionId);
-    return option?.label || "";
+  function statusOptionLabels(statusOptionIds = []) {
+    return statusOptionIds
+      .map((id) => statusOptions.find((status) => status.id === id)?.label)
+      .filter(Boolean);
   }
 
   function updateCamera(id, patch) {
@@ -437,7 +442,7 @@ export default function CameraChecklistApp() {
         name: `Câmera ${String(prev.length + 1).padStart(2, "0")}`,
         location: "",
         equipmentId,
-        statusOptionId: "",
+        statusOptionIds: [],
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -477,7 +482,26 @@ export default function CameraChecklistApp() {
   function removeStatusOption(id) {
     setStatusOptions((prev) => prev.filter((status) => status.id !== id));
     setCameras((prev) =>
-      prev.map((cam) => (cam.statusOptionId === id ? { ...cam, statusOptionId: "" } : cam))
+      prev.map((cam) => ({
+        ...cam,
+        statusOptionIds: (cam.statusOptionIds || []).filter((statusId) => statusId !== id),
+      }))
+    );
+  }
+
+  function toggleCameraStatus(cameraId, statusId, checked) {
+    setCameras((prev) =>
+      prev.map((cam) => {
+        if (cam.id !== cameraId) return cam;
+
+        const current = cam.statusOptionIds || [];
+        return {
+          ...cam,
+          statusOptionIds: checked
+            ? Array.from(new Set([...current, statusId]))
+            : current.filter((id) => id !== statusId),
+        };
+      })
     );
   }
 
@@ -553,7 +577,7 @@ export default function CameraChecklistApp() {
         equipmentIp: equipment?.ip || "Não informado",
         equipmentAdminUser: equipment?.adminUser || "Não informado",
         equipmentAdminPassword: equipment?.adminPassword || "Não informado",
-        customStatus: statusOptionLabel(cam.statusOptionId) || "Não selecionado",
+        customStatus: statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado",
         status: compliant ? "OK" : "NÃO CONFORME",
         angle: compliant ? "OK" : statusLabel(cam.angle),
         imagePercent: compliant ? "OK" : statusLabel(cam.imagePercent),
@@ -838,7 +862,7 @@ export default function CameraChecklistApp() {
                           <div><strong>IP:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.ip || "Não informado")}</div>
                           <div><strong>Usuário admin:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminUser || "Não informado")}</div>
                           <div><strong>Senha:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminPassword || "Não informado")}</div>
-                          <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabel(cam.statusOptionId) || "Não selecionado")}</div>
+                          <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado")}</div>
                           <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
                         </div>
                         ${
@@ -907,11 +931,11 @@ export default function CameraChecklistApp() {
         adminUser,
         adminPassword,
       })),
-      cameras: cameras.map(({ name, location, equipmentId, statusOptionId }) => ({
+      cameras: cameras.map(({ name, location, equipmentId, statusOptionIds }) => ({
         name,
         location,
         equipmentId,
-        statusOptionId,
+        statusOptionIds,
       })),
       unusedCameras: unusedCameras.map(({ name, previousSector, reason }) => ({
         name,
@@ -966,7 +990,11 @@ export default function CameraChecklistApp() {
         equipmentId: validEquipmentIds.has(cam.equipmentId)
           ? cam.equipmentId
           : safeEquipments[0]?.id || "",
-        statusOptionId: validStatusOptionIds.has(cam.statusOptionId) ? cam.statusOptionId : "",
+        statusOptionIds: Array.isArray(cam.statusOptionIds)
+          ? cam.statusOptionIds.filter((statusId) => validStatusOptionIds.has(statusId))
+          : validStatusOptionIds.has(cam.statusOptionId)
+            ? [cam.statusOptionId]
+            : [],
         angle: "pending",
         imagePercent: "pending",
         offline: "pending",
@@ -1330,24 +1358,6 @@ export default function CameraChecklistApp() {
                       </div>
                     </div>
 
-                    <label className="block space-y-1">
-                      <span className={labelClass}>Status da câmera</span>
-                      <select
-                        className={fieldClass}
-                        value={cam.statusOptionId || ""}
-                        onChange={(e) =>
-                          updateCamera(cam.id, { statusOptionId: e.target.value })
-                        }
-                      >
-                        <option value="">Selecione um status pronto</option>
-                        {statusOptions.map((status) => (
-                          <option key={status.id} value={status.id}>
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
                     <div className="grid gap-3 md:grid-cols-4">
                       <ChecklistSelect
                         label="Ângulo correto"
@@ -1383,6 +1393,34 @@ export default function CameraChecklistApp() {
                         onChange={(value) => updateCamera(cam.id, { offline: value })}
                         theme={settings.theme}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className={labelClass}>Status prontos para o relatório</span>
+                      {statusOptions.length ? (
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {statusOptions.map((status) => (
+                            <label
+                              key={status.id}
+                              className="theme-subpanel flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs leading-snug"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={(cam.statusOptionIds || []).includes(status.id)}
+                                onChange={(e) =>
+                                  toggleCameraStatus(cam.id, status.id, e.target.checked)
+                                }
+                                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent-color)]"
+                              />
+                              <span>{status.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="theme-muted text-xs">
+                          Nenhum status pronto cadastrado.
+                        </p>
+                      )}
                     </div>
 
                     <label className="block space-y-1">
