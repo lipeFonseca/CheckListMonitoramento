@@ -823,6 +823,8 @@ export default function CameraChecklistApp() {
               .camera-title { align-items: center; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
               .camera-title h3 { font-size: 13px; margin: 0; }
               .camera-meta { color: #334155; display: grid; gap: 5px; font-size: 12px; margin-bottom: 10px; }
+              .checklist-lines { display: grid; gap: 3px; margin-top: 3px; }
+              .checklist-lines span { display: block; }
               .images { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
               .images img { border: 1px solid #e2e8f0; border-radius: 8px; height: 105px; object-fit: cover; width: 100%; }
               .empty-images { color: #94a3b8; font-size: 11px; padding-top: 2px; }
@@ -914,7 +916,21 @@ export default function CameraChecklistApp() {
                         <div class="camera-meta">
                           <div><strong>Localização:</strong> ${escapeHtml(cam.location || "Não informado")}</div>
                           <div><strong>DVR/NVR:</strong> ${escapeHtml(equipmentLabel(cam.equipmentId))}</div>
-                          <div><strong>Itens checados:</strong> ${escapeHtml(checklistSummary(cam))}</div>
+                          <div>
+                            <strong>Itens checados:</strong>
+                            <div class="checklist-lines">
+                              ${
+                                checklistItems.length
+                                  ? checklistItems
+                                      .map(
+                                        (item) =>
+                                          `<span>${escapeHtml(item.label)}: ${escapeHtml(statusLabel(cam.checks?.[item.id]))}</span>`
+                                      )
+                                      .join("")
+                                  : `<span>Nenhum item configurado</span>`
+                              }
+                            </div>
+                          </div>
                           <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado")}</div>
                           <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
                         </div>
