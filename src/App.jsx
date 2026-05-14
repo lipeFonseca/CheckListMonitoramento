@@ -167,7 +167,6 @@ function createCameraState(cam, index = 0) {
         ? [cam.statusOptionId]
         : [],
     checks: { ...legacyChecks, ...(cam.checks || {}) },
-    wallPercent: "",
     notes: "",
     images: [],
     openImages: false,
@@ -499,7 +498,6 @@ export default function CameraChecklistApp() {
         equipmentId,
         statusOptionIds: [],
         checks: Object.fromEntries(checklistItems.map((item) => [item.id, "pending"])),
-        wallPercent: "",
         notes: "",
         images: [],
         openImages: false,
@@ -684,7 +682,6 @@ export default function CameraChecklistApp() {
         customStatus: statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado",
         status: compliant ? "OK" : "NÃO CONFORME",
         checklist: checklistSummary(cam),
-        wallPercent: cam.wallPercent ? `${cam.wallPercent}%` : "Não informado",
         notes: cam.notes || (compliant ? "OK" : "Sem observação"),
         images: cam.images.length,
       };
@@ -707,7 +704,6 @@ export default function CameraChecklistApp() {
       "Status pronto",
       "Status Geral",
       "Itens checados",
-      "% informado",
       "Observações",
       "Qtd. imagens",
     ];
@@ -729,7 +725,6 @@ export default function CameraChecklistApp() {
           row.customStatus,
           row.status,
           row.checklist,
-          row.wallPercent,
           row.notes,
           row.images,
         ]
@@ -748,7 +743,6 @@ export default function CameraChecklistApp() {
           cam.name,
           cam.previousSector || "Não informado",
           "Não atribuído",
-          "Não aplicado",
           "Não aplicado",
           "Não aplicado",
           "Não aplicado",
@@ -1068,7 +1062,6 @@ export default function CameraChecklistApp() {
           ...Object.fromEntries(templateChecklistItems.map((item) => [item.id, "pending"])),
           ...(cam.checks || {}),
         },
-        wallPercent: "",
         notes: "",
         images: [],
         openImages: false,
@@ -1388,34 +1381,22 @@ export default function CameraChecklistApp() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 overflow-x-auto pb-2">
-                      {checklistItems.map((item) => (
-                        <ChecklistSelect
-                          key={item.id}
-                          label={item.label}
-                          value={cam.checks?.[item.id] || "pending"}
-                          onChange={(value) =>
-                            updateCamera(cam.id, {
-                              checks: { ...(cam.checks || {}), [item.id]: value },
-                            })
-                          }
-                        />
-                      ))}
-                      <label className="min-w-[220px] flex-1 space-y-1">
-                        <span className={labelClass}>% parede / obstrução</span>
-                        <input
-                          className={fieldClass}
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={cam.wallPercent}
-                          onChange={(e) =>
-                            updateCamera(cam.id, { wallPercent: e.target.value })
-                          }
-                          placeholder="Ex: 40"
-                        />
-                      </label>
-                    </div>
+                    {checklistItems.length ? (
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {checklistItems.map((item) => (
+                          <ChecklistSelect
+                            key={item.id}
+                            label={item.label}
+                            value={cam.checks?.[item.id] || "pending"}
+                            onChange={(value) =>
+                              updateCamera(cam.id, {
+                                checks: { ...(cam.checks || {}), [item.id]: value },
+                              })
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
 
                     <div className="space-y-2">
                       <span className={labelClass}>Status prontos para o relatório</span>
