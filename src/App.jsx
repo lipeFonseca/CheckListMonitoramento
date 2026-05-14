@@ -1339,7 +1339,7 @@ export default function CameraChecklistApp() {
                       </div>
                     </div>
 
-                    <div className="grid gap-3 md:grid-cols-4">
+                    <div className="flex gap-3 overflow-x-auto pb-2">
                       {checklistItems.map((item) => (
                         <ChecklistSelect
                           key={item.id}
@@ -1352,7 +1352,7 @@ export default function CameraChecklistApp() {
                           }
                         />
                       ))}
-                      <label className="space-y-1">
+                      <label className="min-w-[220px] flex-1 space-y-1">
                         <span className={labelClass}>% parede / obstrução</span>
                         <input
                           className={fieldClass}
@@ -1592,7 +1592,7 @@ function SummaryCard({ title, value, theme }) {
 
 function ChecklistSelect({ label, value, onChange }) {
   return (
-    <label className="space-y-1">
+    <label className="min-w-[220px] flex-1 space-y-1">
       <span className="theme-label text-sm font-medium">{label}</span>
       <select
         className="theme-field w-full rounded-xl border p-2"
