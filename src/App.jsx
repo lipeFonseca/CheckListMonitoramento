@@ -1176,7 +1176,7 @@ export default function CameraChecklistApp() {
           <SummaryCard title="Total de câmeras" value={summary.total} theme={settings.theme} />
           <SummaryCard title="Em conformidade" value={summary.compliant} theme={settings.theme} />
           <SummaryCard
-            title="Com apontamentos"
+            title="Requer Atenção"
             value={summary.nonCompliant}
             theme={settings.theme}
           />
