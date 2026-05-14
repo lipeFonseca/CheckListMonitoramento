@@ -48,6 +48,10 @@ export function SettingsModal({
   onAddStatusOption,
   onUpdateStatusOption,
   onRemoveStatusOption,
+  checklistItems = [],
+  onAddChecklistItem,
+  onUpdateChecklistItem,
+  onRemoveChecklistItem,
 }) {
   const [logoPreview, setLogoPreview] = useState(settings.logo);
   const [headerImagePreview, setHeaderImagePreview] = useState(settings.headerImage);
@@ -338,6 +342,51 @@ export function SettingsModal({
               </div>
             ) : (
               <p className="theme-muted text-sm">Nenhum status pronto cadastrado.</p>
+            )}
+          </div>
+
+          <div className="theme-subpanel rounded-xl border p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold">Itens de checagem</h3>
+                <p className="theme-muted text-xs">
+                  Campos que aparecem como opções em cada câmera.
+                </p>
+              </div>
+              <button
+                onClick={onAddChecklistItem}
+                className="btn-outline inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar
+              </button>
+            </div>
+
+            {checklistItems.length ? (
+              <div className="space-y-2">
+                {checklistItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center"
+                  >
+                    <input
+                      className="theme-field w-full rounded-lg border px-3 py-2 text-sm"
+                      value={item.label}
+                      onChange={(e) => onUpdateChecklistItem?.(item.id, e.target.value)}
+                      placeholder="Ex: Câmera funcionando"
+                    />
+                    <button
+                      className="btn-ghost inline-flex h-9 items-center justify-center rounded-lg px-3"
+                      onClick={() => onRemoveChecklistItem?.(item.id)}
+                      title="Remover item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="theme-muted text-sm">Nenhum item de checagem cadastrado.</p>
             )}
           </div>
 

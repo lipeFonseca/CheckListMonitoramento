@@ -24,6 +24,12 @@ const defaultStatusOptions = [
   },
 ];
 
+const defaultChecklistItems = [
+  { id: "angle", label: "Ângulo correto" },
+  { id: "imagePercent", label: "% de imagem adequado" },
+  { id: "offline", label: "Câmera funcionando" },
+];
+
 const defaultSettings = {
   theme: "light",
   logo: null,
@@ -143,6 +149,12 @@ function getSettingsMetadata(settings) {
 }
 
 function createCameraState(cam, index = 0) {
+  const legacyChecks = {
+    angle: cam.angle || "pending",
+    imagePercent: cam.imagePercent || "pending",
+    offline: cam.offline || "pending",
+  };
+
   return {
     id: cam.id || crypto.randomUUID(),
     name: cam.name || `Câmera ${String(index + 1).padStart(2, "0")}`,
@@ -153,9 +165,7 @@ function createCameraState(cam, index = 0) {
       : cam.statusOptionId
         ? [cam.statusOptionId]
         : [],
-    angle: "pending",
-    imagePercent: "pending",
-    offline: "pending",
+    checks: { ...legacyChecks, ...(cam.checks || {}) },
     wallPercent: "",
     notes: "",
     images: [],
@@ -172,6 +182,7 @@ function loadStoredInventory() {
         cameras: defaultCameras.map(createCameraState),
         unusedCameras: [],
         statusOptions: defaultStatusOptions,
+        checklistItems: defaultChecklistItems,
       };
     }
 
@@ -211,6 +222,13 @@ function loadStoredInventory() {
               label: status.label || `Status ${index + 1}`,
             }))
           : defaultStatusOptions,
+      checklistItems:
+        Array.isArray(parsed.checklistItems)
+          ? parsed.checklistItems.map((item, index) => ({
+              id: item.id || crypto.randomUUID(),
+              label: item.label || `Item ${index + 1}`,
+            }))
+          : defaultChecklistItems,
     };
   } catch (error) {
     console.error("Erro ao carregar cadastro:", error);
@@ -219,11 +237,12 @@ function loadStoredInventory() {
       cameras: defaultCameras.map(createCameraState),
       unusedCameras: [],
       statusOptions: defaultStatusOptions,
+      checklistItems: defaultChecklistItems,
     };
   }
 }
 
-function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions) {
+function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions, checklistItems) {
   return {
     equipments: equipments.map(({ id, type, name, location, ip, adminUser, adminPassword }) => ({
       id,
@@ -234,12 +253,13 @@ function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions)
       adminUser,
       adminPassword,
     })),
-    cameras: cameras.map(({ id, name, location, equipmentId, statusOptionIds }) => ({
+    cameras: cameras.map(({ id, name, location, equipmentId, statusOptionIds, checks }) => ({
       id,
       name,
       location,
       equipmentId,
       statusOptionIds,
+      checks,
     })),
     unusedCameras: unusedCameras.map(({ id, name, previousSector, reason }) => ({
       id,
@@ -248,13 +268,14 @@ function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions)
       reason,
     })),
     statusOptions: statusOptions.map(({ id, label }) => ({ id, label })),
+    checklistItems: checklistItems.map(({ id, label }) => ({ id, label })),
   };
 }
 
 function statusLabel(value) {
   if (value === "ok") return "OK";
-  if (value === "nok") return "Não conforme";
-  return "Não avaliado";
+  if (value === "review") return "Avaliar";
+  return "Não Avaliado";
 }
 
 function readFileAsDataUrl(file) {
@@ -274,6 +295,7 @@ export default function CameraChecklistApp() {
   const [cameras, setCameras] = useState(initialInventory.cameras);
   const [unusedCameras, setUnusedCameras] = useState(initialInventory.unusedCameras);
   const [statusOptions, setStatusOptions] = useState(initialInventory.statusOptions);
+  const [checklistItems, setChecklistItems] = useState(initialInventory.checklistItems);
   const [settings, setSettings] = useState(loadStoredSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -345,18 +367,18 @@ export default function CameraChecklistApp() {
     try {
       localStorage.setItem(
         INVENTORY_STORAGE_KEY,
-        JSON.stringify(getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions))
+        JSON.stringify(
+          getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions, checklistItems)
+        )
       );
     } catch (error) {
       console.error("Erro ao salvar cadastro:", error);
     }
-  }, [equipments, cameras, unusedCameras, statusOptions]);
+  }, [equipments, cameras, unusedCameras, statusOptions, checklistItems]);
 
   const summary = useMemo(() => {
     const total = cameras.length;
-    const compliant = cameras.filter(
-      (cam) => cam.angle === "ok" && cam.imagePercent === "ok" && cam.offline === "ok"
-    ).length;
+    const compliant = cameras.filter((cam) => cameraIsCompliant(cam)).length;
     return {
       total,
       compliant,
@@ -364,7 +386,7 @@ export default function CameraChecklistApp() {
       unused: unusedCameras.length,
       equipments: equipments.length,
     };
-  }, [cameras, equipments.length, unusedCameras.length]);
+  }, [cameras, equipments.length, unusedCameras.length, checklistItems]);
 
   const selectedEquipment = useMemo(
     () => equipments.find((equipment) => equipment.id === selectedEquipmentId) || null,
@@ -443,9 +465,7 @@ export default function CameraChecklistApp() {
         location: "",
         equipmentId,
         statusOptionIds: [],
-        angle: "pending",
-        imagePercent: "pending",
-        offline: "pending",
+        checks: Object.fromEntries(checklistItems.map((item) => [item.id, "pending"])),
         wallPercent: "",
         notes: "",
         images: [],
@@ -486,6 +506,39 @@ export default function CameraChecklistApp() {
         ...cam,
         statusOptionIds: (cam.statusOptionIds || []).filter((statusId) => statusId !== id),
       }))
+    );
+  }
+
+  function updateChecklistItem(id, label) {
+    setChecklistItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, label } : item))
+    );
+  }
+
+  function addChecklistItem() {
+    const id = crypto.randomUUID();
+    setChecklistItems((prev) => [
+      ...prev,
+      {
+        id,
+        label: `Novo item ${String(prev.length + 1).padStart(2, "0")}`,
+      },
+    ]);
+    setCameras((prev) =>
+      prev.map((cam) => ({
+        ...cam,
+        checks: { ...(cam.checks || {}), [id]: "pending" },
+      }))
+    );
+  }
+
+  function removeChecklistItem(id) {
+    setChecklistItems((prev) => prev.filter((item) => item.id !== id));
+    setCameras((prev) =>
+      prev.map((cam) => {
+        const { [id]: removed, ...remainingChecks } = cam.checks || {};
+        return { ...cam, checks: remainingChecks };
+      })
     );
   }
 
@@ -563,7 +616,15 @@ export default function CameraChecklistApp() {
   }
 
   function cameraIsCompliant(cam) {
-    return cam.angle === "ok" && cam.imagePercent === "ok" && cam.offline === "ok";
+    return checklistItems.length > 0 && checklistItems.every((item) => cam.checks?.[item.id] === "ok");
+  }
+
+  function checklistSummary(cam) {
+    if (!checklistItems.length) return "Nenhum item configurado";
+
+    return checklistItems
+      .map((item) => `${item.label}: ${statusLabel(cam.checks?.[item.id])}`)
+      .join(" | ");
   }
 
   function buildReportRows() {
@@ -579,10 +640,8 @@ export default function CameraChecklistApp() {
         equipmentAdminPassword: equipment?.adminPassword || "Não informado",
         customStatus: statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado",
         status: compliant ? "OK" : "NÃO CONFORME",
-        angle: compliant ? "OK" : statusLabel(cam.angle),
-        imagePercent: compliant ? "OK" : statusLabel(cam.imagePercent),
+        checklist: checklistSummary(cam),
         wallPercent: cam.wallPercent ? `${cam.wallPercent}%` : "Não informado",
-        offline: compliant ? "OK" : statusLabel(cam.offline),
         notes: cam.notes || (compliant ? "OK" : "Sem observação"),
         images: cam.images.length,
       };
@@ -604,10 +663,8 @@ export default function CameraChecklistApp() {
       "Senha",
       "Status pronto",
       "Status Geral",
-      "Ângulo correto",
-      "% de imagem / parede",
+      "Itens checados",
       "% informado",
-      "Câmera funcionando",
       "Observações",
       "Qtd. imagens",
     ];
@@ -628,10 +685,8 @@ export default function CameraChecklistApp() {
           row.equipmentAdminPassword,
           row.customStatus,
           row.status,
-          row.angle,
-          row.imagePercent,
+          row.checklist,
           row.wallPercent,
-          row.offline,
           row.notes,
           row.images,
         ]
@@ -655,8 +710,6 @@ export default function CameraChecklistApp() {
           "Não aplicado",
           "Não aplicado",
           "FORA DE USO",
-          "Não aplicado",
-          "Não aplicado",
           "Não aplicado",
           "Não aplicado",
           cam.reason || "Sem observação",
@@ -818,6 +871,7 @@ export default function CameraChecklistApp() {
                         <div class="camera-meta">
                           <div><strong>Localização:</strong> ${escapeHtml(cam.location || "Não informado")}</div>
                           <div><strong>DVR/NVR:</strong> ${escapeHtml(equipmentLabel(cam.equipmentId))}</div>
+                          <div><strong>Itens checados:</strong> ${escapeHtml(checklistSummary(cam))}</div>
                           <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado")}</div>
                           <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
                         </div>
@@ -899,6 +953,7 @@ export default function CameraChecklistApp() {
         reason,
       })),
       statusOptions: statusOptions.map(({ id, label }) => ({ id, label })),
+      checklistItems: checklistItems.map(({ id, label }) => ({ id, label })),
     };
     localStorage.setItem("cameraChecklistTemplate", JSON.stringify(template));
     alert("Modelo salvo no navegador para próximas verificações.");
@@ -933,11 +988,20 @@ export default function CameraChecklistApp() {
           }))
         : defaultStatusOptions;
     const validStatusOptionIds = new Set(templateStatusOptions.map((status) => status.id));
+    const templateChecklistItems = Array.isArray(template)
+      ? defaultChecklistItems
+      : Array.isArray(template.checklistItems)
+        ? template.checklistItems.map((item, index) => ({
+            id: item.id || crypto.randomUUID(),
+            label: item.label || `Item ${index + 1}`,
+          }))
+        : defaultChecklistItems;
     const templateCameras = Array.isArray(template) ? template : template.cameras || [];
 
     setEquipments(safeEquipments);
     setSelectedEquipmentId(safeEquipments[0]?.id || "");
     setStatusOptions(templateStatusOptions);
+    setChecklistItems(templateChecklistItems);
     setCameras(
       templateCameras.map((cam) => ({
         id: crypto.randomUUID(),
@@ -951,9 +1015,10 @@ export default function CameraChecklistApp() {
           : validStatusOptionIds.has(cam.statusOptionId)
             ? [cam.statusOptionId]
             : [],
-        angle: "pending",
-        imagePercent: "pending",
-        offline: "pending",
+        checks: {
+          ...Object.fromEntries(templateChecklistItems.map((item) => [item.id, "pending"])),
+          ...(cam.checks || {}),
+        },
         wallPercent: "",
         notes: "",
         images: [],
@@ -1043,6 +1108,10 @@ export default function CameraChecklistApp() {
           onAddStatusOption={addStatusOption}
           onUpdateStatusOption={updateStatusOption}
           onRemoveStatusOption={removeStatusOption}
+          checklistItems={checklistItems}
+          onAddChecklistItem={addChecklistItem}
+          onUpdateChecklistItem={updateChecklistItem}
+          onRemoveChecklistItem={removeChecklistItem}
         />
 
         <div className="grid gap-4 md:grid-cols-5">
@@ -1271,20 +1340,18 @@ export default function CameraChecklistApp() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-4">
-                      <ChecklistSelect
-                        label="Ângulo correto"
-                        value={cam.angle}
-                        onChange={(value) => updateCamera(cam.id, { angle: value })}
-                        theme={settings.theme}
-                      />
-                      <ChecklistSelect
-                        label="% de imagem adequado"
-                        value={cam.imagePercent}
-                        onChange={(value) =>
-                          updateCamera(cam.id, { imagePercent: value })
-                        }
-                        theme={settings.theme}
-                      />
+                      {checklistItems.map((item) => (
+                        <ChecklistSelect
+                          key={item.id}
+                          label={item.label}
+                          value={cam.checks?.[item.id] || "pending"}
+                          onChange={(value) =>
+                            updateCamera(cam.id, {
+                              checks: { ...(cam.checks || {}), [item.id]: value },
+                            })
+                          }
+                        />
+                      ))}
                       <label className="space-y-1">
                         <span className={labelClass}>% parede / obstrução</span>
                         <input
@@ -1299,12 +1366,6 @@ export default function CameraChecklistApp() {
                           placeholder="Ex: 40"
                         />
                       </label>
-                      <ChecklistSelect
-                        label="Câmera funcionando"
-                        value={cam.offline}
-                        onChange={(value) => updateCamera(cam.id, { offline: value })}
-                        theme={settings.theme}
-                      />
                     </div>
 
                     <div className="space-y-2">
@@ -1529,7 +1590,7 @@ function SummaryCard({ title, value, theme }) {
   );
 }
 
-function ChecklistSelect({ label, value, onChange, theme }) {
+function ChecklistSelect({ label, value, onChange }) {
   return (
     <label className="space-y-1">
       <span className="theme-label text-sm font-medium">{label}</span>
@@ -1538,9 +1599,9 @@ function ChecklistSelect({ label, value, onChange, theme }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="pending">Não avaliado</option>
         <option value="ok">OK</option>
-        <option value="nok">Não conforme</option>
+        <option value="review">Avaliar</option>
+        <option value="pending">Não Avaliado</option>
       </select>
     </label>
   );
