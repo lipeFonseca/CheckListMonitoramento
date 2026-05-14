@@ -44,6 +44,7 @@ const defaultSettings = {
 const today = new Date().toISOString().slice(0, 10);
 const SETTINGS_STORAGE_KEY = "cameraChecklistSettings";
 const INVENTORY_STORAGE_KEY = "cameraChecklistInventory";
+const CHECKLIST_STORAGE_KEY = "cameraChecklistItems";
 const SETTINGS_IMAGE_DB = "cameraChecklistImageSettings";
 const SETTINGS_IMAGE_STORE = "settings";
 const SETTINGS_IMAGE_KEY = "images";
@@ -173,8 +174,38 @@ function createCameraState(cam, index = 0) {
   };
 }
 
+function normalizeChecklistItems(items) {
+  if (!Array.isArray(items)) return null;
+
+  return items.map((item, index) => ({
+    id: item?.id || crypto.randomUUID(),
+    label: item?.label || `Item ${index + 1}`,
+  }));
+}
+
+function loadStoredChecklistItems() {
+  try {
+    const savedChecklistItems = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+    if (!savedChecklistItems) return null;
+
+    return normalizeChecklistItems(repairSavedData(JSON.parse(savedChecklistItems)));
+  } catch (error) {
+    console.error("Erro ao carregar itens de checagem:", error);
+    return null;
+  }
+}
+
+function saveChecklistItems(items) {
+  try {
+    localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error("Erro ao salvar itens de checagem:", error);
+  }
+}
+
 function loadStoredInventory() {
   try {
+    const storedChecklistItems = loadStoredChecklistItems();
     const savedInventory = localStorage.getItem(INVENTORY_STORAGE_KEY);
     if (!savedInventory) {
       return {
@@ -182,7 +213,7 @@ function loadStoredInventory() {
         cameras: defaultCameras.map(createCameraState),
         unusedCameras: [],
         statusOptions: defaultStatusOptions,
-        checklistItems: defaultChecklistItems,
+        checklistItems: storedChecklistItems ?? defaultChecklistItems,
       };
     }
 
@@ -223,21 +254,19 @@ function loadStoredInventory() {
             }))
           : defaultStatusOptions,
       checklistItems:
-        Array.isArray(parsed.checklistItems)
-          ? parsed.checklistItems.map((item, index) => ({
-              id: item.id || crypto.randomUUID(),
-              label: item.label || `Item ${index + 1}`,
-            }))
-          : defaultChecklistItems,
+        storedChecklistItems ??
+        normalizeChecklistItems(parsed.checklistItems) ??
+        defaultChecklistItems,
     };
   } catch (error) {
     console.error("Erro ao carregar cadastro:", error);
+    const storedChecklistItems = loadStoredChecklistItems();
     return {
       equipments: defaultEquipments,
       cameras: defaultCameras.map(createCameraState),
       unusedCameras: [],
       statusOptions: defaultStatusOptions,
-      checklistItems: defaultChecklistItems,
+      checklistItems: storedChecklistItems ?? defaultChecklistItems,
     };
   }
 }
@@ -376,6 +405,10 @@ export default function CameraChecklistApp() {
     }
   }, [equipments, cameras, unusedCameras, statusOptions, checklistItems]);
 
+  useEffect(() => {
+    saveChecklistItems(checklistItems);
+  }, [checklistItems]);
+
   const summary = useMemo(() => {
     const total = cameras.length;
     const compliant = cameras.filter((cam) => cameraIsCompliant(cam)).length;
@@ -510,20 +543,26 @@ export default function CameraChecklistApp() {
   }
 
   function updateChecklistItem(id, label) {
-    setChecklistItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, label } : item))
-    );
+    setChecklistItems((prev) => {
+      const next = prev.map((item) => (item.id === id ? { ...item, label } : item));
+      saveChecklistItems(next);
+      return next;
+    });
   }
 
   function addChecklistItem() {
     const id = crypto.randomUUID();
-    setChecklistItems((prev) => [
-      ...prev,
-      {
-        id,
-        label: `Novo item ${String(prev.length + 1).padStart(2, "0")}`,
-      },
-    ]);
+    setChecklistItems((prev) => {
+      const next = [
+        ...prev,
+        {
+          id,
+          label: `Novo item ${String(prev.length + 1).padStart(2, "0")}`,
+        },
+      ];
+      saveChecklistItems(next);
+      return next;
+    });
     setCameras((prev) =>
       prev.map((cam) => ({
         ...cam,
@@ -533,7 +572,11 @@ export default function CameraChecklistApp() {
   }
 
   function removeChecklistItem(id) {
-    setChecklistItems((prev) => prev.filter((item) => item.id !== id));
+    setChecklistItems((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      saveChecklistItems(next);
+      return next;
+    });
     setCameras((prev) =>
       prev.map((cam) => {
         const { [id]: removed, ...remainingChecks } = cam.checks || {};
