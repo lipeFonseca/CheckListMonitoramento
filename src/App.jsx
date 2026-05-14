@@ -790,10 +790,15 @@ export default function CameraChecklistApp() {
               .images img { border: 1px solid #e2e8f0; border-radius: 8px; height: 105px; object-fit: cover; width: 100%; }
               .empty-images { color: #94a3b8; font-size: 11px; padding-top: 2px; }
               .equipment-list { display: grid; gap: 10px; grid-template-columns: 1fr; margin-bottom: 22px; }
-              .equipment-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
-              .equipment-title { font-size: 12px; font-weight: 800; margin: 0 0 4px; }
-              .equipment-details { color: #334155; display: grid; gap: 6px 18px; grid-template-columns: repeat(3, 1fr); font-size: 12px; margin-bottom: 10px; }
-              .equipment-cameras { grid-column: 1 / -1; }
+              .equipment-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; page-break-inside: avoid; }
+              .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; }
+              .equipment-title { font-size: 13px; font-weight: 800; margin: 0; }
+              .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 10px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
+              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); font-size: 11px; margin-bottom: 12px; }
+              .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 8px 10px; }
+              .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
+              .equipment-cameras { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; color: #334155; font-size: 11px; padding: 9px 10px; }
+              .equipment-cameras strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
               .unused-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 11px 12px; }
               @media print { body { background: #ffffff; } .page { padding: 22px 0 0; } .cover { margin: -16mm -16mm 0; width: calc(100% + 32mm); } }
@@ -835,20 +840,22 @@ export default function CameraChecklistApp() {
                         .map(
                           (equipment) => `
                             <div class="equipment-item">
-                              <p class="equipment-title">${escapeHtml(equipment.type)} - ${escapeHtml(equipment.name || "Sem nome")}</p>
-                              <div class="equipment-details">
-                                <div><strong>Local:</strong> ${escapeHtml(equipment.location || "Não informado")}</div>
-                                <div><strong>IP:</strong> ${escapeHtml(equipment.ip || "Não informado")}</div>
-                                <div><strong>Usuário admin:</strong> ${escapeHtml(equipment.adminUser || "Não informado")}</div>
-                                <div><strong>Senha:</strong> ${escapeHtml(equipment.adminPassword || "Não informado")}</div>
-                                <div><strong>Câmeras atribuídas:</strong> ${cameras.filter((cam) => cam.equipmentId === equipment.id).length}</div>
-                                <div class="equipment-cameras"><strong>Lista:</strong> ${escapeHtml(
-                                  cameras
-                                    .filter((cam) => cam.equipmentId === equipment.id)
-                                    .map((cam) => cam.name)
-                                    .join(", ") || "Nenhuma câmera atribuída"
-                                )}</div>
+                              <div class="equipment-head">
+                                <p class="equipment-title">${escapeHtml(equipment.type)} - ${escapeHtml(equipment.name || "Sem nome")}</p>
+                                <span class="equipment-count">${cameras.filter((cam) => cam.equipmentId === equipment.id).length} câmera(s)</span>
                               </div>
+                              <div class="equipment-details">
+                                <div class="equipment-detail"><strong>Local</strong>${escapeHtml(equipment.location || "Não informado")}</div>
+                                <div class="equipment-detail"><strong>IP</strong>${escapeHtml(equipment.ip || "Não informado")}</div>
+                                <div class="equipment-detail"><strong>Usuário admin</strong>${escapeHtml(equipment.adminUser || "Não informado")}</div>
+                                <div class="equipment-detail"><strong>Senha</strong>${escapeHtml(equipment.adminPassword || "Não informado")}</div>
+                              </div>
+                              <div class="equipment-cameras"><strong>Câmeras atribuídas</strong>${escapeHtml(
+                                cameras
+                                  .filter((cam) => cam.equipmentId === equipment.id)
+                                  .map((cam) => cam.name)
+                                  .join(", ") || "Nenhuma câmera atribuída"
+                              )}</div>
                             </div>
                           `
                         )
