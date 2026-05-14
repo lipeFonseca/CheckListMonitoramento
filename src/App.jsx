@@ -794,9 +794,11 @@ export default function CameraChecklistApp() {
               .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; }
               .equipment-title { font-size: 13px; font-weight: 800; margin: 0; }
               .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 10px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
-              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); font-size: 11px; margin-bottom: 12px; }
+              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: 1.2fr 1fr 1.4fr; font-size: 11px; margin-bottom: 12px; }
               .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 8px 10px; }
               .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
+              .equipment-access { display: grid; gap: 4px; }
+              .equipment-access span { display: block; }
               .equipment-cameras { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; color: #334155; font-size: 11px; padding: 9px 10px; }
               .equipment-cameras strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
@@ -847,8 +849,13 @@ export default function CameraChecklistApp() {
                               <div class="equipment-details">
                                 <div class="equipment-detail"><strong>Local</strong>${escapeHtml(equipment.location || "Não informado")}</div>
                                 <div class="equipment-detail"><strong>IP</strong>${escapeHtml(equipment.ip || "Não informado")}</div>
-                                <div class="equipment-detail"><strong>Usuário admin</strong>${escapeHtml(equipment.adminUser || "Não informado")}</div>
-                                <div class="equipment-detail"><strong>Senha</strong>${escapeHtml(equipment.adminPassword || "Não informado")}</div>
+                                <div class="equipment-detail">
+                                  <strong>Acesso</strong>
+                                  <div class="equipment-access">
+                                    <span><b>Usuário:</b> ${escapeHtml(equipment.adminUser || "Não informado")}</span>
+                                    <span><b>Senha:</b> ${escapeHtml(equipment.adminPassword || "Não informado")}</span>
+                                  </div>
+                                </div>
                               </div>
                               <div class="equipment-cameras"><strong>Câmeras atribuídas</strong>${escapeHtml(
                                 cameras
