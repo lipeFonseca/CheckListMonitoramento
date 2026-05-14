@@ -818,9 +818,6 @@ export default function CameraChecklistApp() {
                         <div class="camera-meta">
                           <div><strong>Localização:</strong> ${escapeHtml(cam.location || "Não informado")}</div>
                           <div><strong>DVR/NVR:</strong> ${escapeHtml(equipmentLabel(cam.equipmentId))}</div>
-                          <div><strong>IP:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.ip || "Não informado")}</div>
-                          <div><strong>Usuário admin:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminUser || "Não informado")}</div>
-                          <div><strong>Senha:</strong> ${escapeHtml(equipments.find((equipment) => equipment.id === cam.equipmentId)?.adminPassword || "Não informado")}</div>
                           <div><strong>Status pronto:</strong> ${escapeHtml(statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado")}</div>
                           <div><strong>Observações:</strong> ${escapeHtml(cam.notes || (compliant ? "OK" : "Sem observação"))}</div>
                         </div>
