@@ -799,8 +799,6 @@ export default function CameraChecklistApp() {
               .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .equipment-access { display: grid; gap: 4px; }
               .equipment-access span { display: block; }
-              .equipment-cameras { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; color: #334155; font-size: 11px; padding: 9px 10px; }
-              .equipment-cameras strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
               .unused-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 11px 12px; }
               @media print { body { background: #ffffff; } .page { padding: 22px 0 0; } .cover { margin: -16mm -16mm 0; width: calc(100% + 32mm); } }
@@ -857,12 +855,6 @@ export default function CameraChecklistApp() {
                                   </div>
                                 </div>
                               </div>
-                              <div class="equipment-cameras"><strong>Câmeras atribuídas</strong>${escapeHtml(
-                                cameras
-                                  .filter((cam) => cam.equipmentId === equipment.id)
-                                  .map((cam) => cam.name)
-                                  .join(", ") || "Nenhuma câmera atribuída"
-                              )}</div>
                             </div>
                           `
                         )
