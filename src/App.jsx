@@ -860,31 +860,31 @@ export default function CameraChecklistApp() {
           <head>
             <title>Relatório diário de câmeras</title>
             <style>
-              @page { margin: 16mm; }
+              @page { margin: 10mm; }
               * { box-sizing: border-box; }
               body { margin: 0; background: #f8fafc; color: #0f172a; font-family: Arial, Helvetica, sans-serif; line-height: 1.45; }
               .cover { width: 100%; height: 150px; overflow: hidden; background: #0f172a; border-bottom: 4px solid #f97316; }
               .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-              .page { padding: 28px 32px 36px; }
-              .report-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+              .page { padding: 18px 20px 28px; }
+              .report-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
               .brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
               .logo { display: flex; align-items: center; justify-content: center; }
-              .logo-framed { min-width: 150px; min-height: 78px; max-width: 210px; max-height: 92px; padding: 12px 18px; position: relative; overflow: hidden; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16); }
+              .logo-framed { flex: 0 0 128px; height: 68px; min-width: 128px; padding: 10px 14px; position: relative; overflow: hidden; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16); }
               .logo-frame-bg { height: 100%; inset: 0; max-height: none; max-width: none; object-fit: cover; position: absolute; width: 100%; z-index: 0; }
-              .logo-image { max-width: 100%; max-height: 72px; object-fit: contain; position: relative; z-index: 1; }
-              h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
-              .subtitle { margin: 4px 0 0; color: #64748b; font-size: 12px; }
-              .date-pill { border: 1px solid #cbd5e1; border-radius: 999px; color: #334155; font-size: 12px; font-weight: 700; padding: 8px 12px; white-space: nowrap; }
-              .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+              .logo-image { max-width: 100%; max-height: 52px; object-fit: contain; position: relative; z-index: 1; }
+              h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
+              .subtitle { margin: 4px 0 0; color: #64748b; font-size: 11px; }
+              .date-pill { border: 1px solid #cbd5e1; border-radius: 999px; color: #334155; font-size: 11px; font-weight: 700; padding: 7px 11px; white-space: nowrap; }
+              .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
               .meta-card, .box, .camera-block { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; }
-              .meta-card { padding: 11px 12px; }
-              .label { display: block; color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-              .value { display: block; margin-top: 3px; color: #0f172a; font-size: 13px; font-weight: 700; }
-              .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 18px 0 22px; }
-              .box { padding: 15px; text-align: center; }
-              .box strong { color: #64748b; display: block; font-size: 11px; text-transform: uppercase; }
-              .box span { color: #0f172a; display: block; font-size: 25px; font-weight: 800; margin-top: 4px; }
-              .section-title { margin: 24px 0 10px; font-size: 16px; }
+              .meta-card { padding: 9px 10px; }
+              .label { display: block; color: #64748b; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+              .value { display: block; margin-top: 3px; color: #0f172a; font-size: 12px; font-weight: 700; }
+              .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0 16px; }
+              .box { min-height: 72px; padding: 11px 10px; text-align: center; }
+              .box strong { color: #64748b; display: block; font-size: 9px; line-height: 1.2; text-transform: uppercase; }
+              .box span { color: #0f172a; display: block; font-size: 22px; font-weight: 800; margin-top: 4px; }
+              .section-title { margin: 18px 0 8px; font-size: 15px; }
               table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 10px; }
               th, td { border-bottom: 1px solid #e2e8f0; padding: 9px 10px; text-align: left; vertical-align: top; }
               th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; }
@@ -892,7 +892,7 @@ export default function CameraChecklistApp() {
               .badge { border-radius: 999px; display: inline-block; font-size: 9px; font-weight: 800; padding: 4px 8px; white-space: nowrap; }
               .ok { background: #dcfce7; color: #047857; }
               .nok { background: #fee2e2; color: #b91c1c; }
-              .detail-list { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+              .detail-list { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
               .camera-block { padding: 14px; page-break-inside: avoid; }
               .camera-title { align-items: center; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
               .camera-title h3 { font-size: 13px; margin: 0; }
@@ -902,13 +902,13 @@ export default function CameraChecklistApp() {
               .images { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
               .images img { border: 1px solid #e2e8f0; border-radius: 8px; height: 105px; object-fit: cover; width: 100%; }
               .empty-images { color: #94a3b8; font-size: 11px; padding-top: 2px; }
-              .equipment-list { display: grid; gap: 10px; grid-template-columns: 1fr; margin-bottom: 22px; }
-              .equipment-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; page-break-inside: avoid; }
-              .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; }
-              .equipment-title { font-size: 13px; font-weight: 800; margin: 0; }
+              .equipment-list { display: grid; gap: 10px; grid-template-columns: 1fr; margin-bottom: 18px; }
+              .equipment-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; page-break-inside: avoid; }
+              .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; }
+              .equipment-title { font-size: 12px; font-weight: 800; margin: 0; }
               .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 10px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
-              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); font-size: 11px; margin-bottom: 12px; }
-              .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 8px 10px; }
+              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px; }
+              .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; min-height: 80px; padding: 8px 9px; }
               .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .equipment-access { display: grid; gap: 4px; }
               .equipment-access span { display: block; }
@@ -916,7 +916,7 @@ export default function CameraChecklistApp() {
               .equipment-port-list span { display: block; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
               .unused-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 11px 12px; }
-              @media print { body { background: #ffffff; } .page { padding: 22px 0 0; } .cover { margin: -16mm -16mm 0; width: calc(100% + 32mm); } }
+              @media print { body { background: #ffffff; } .page { padding: 8px 0 0; } .cover { margin: -10mm -10mm 0; width: calc(100% + 20mm); } }
             </style>
           </head>
           <body>
