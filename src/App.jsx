@@ -174,6 +174,16 @@ function getSettingsMetadata(settings) {
   return metadata;
 }
 
+function availablePorts(equipment) {
+  if (!equipment?.totalPorts || !equipment?.occupiedPorts) return null;
+
+  const total = Number(equipment?.totalPorts);
+  const occupied = Number(equipment?.occupiedPorts);
+
+  if (!Number.isFinite(total) || !Number.isFinite(occupied)) return null;
+  return Math.max(total - occupied, 0);
+}
+
 function createCameraState(cam, index = 0) {
   const legacyChecks = {
     angle: cam.angle || "pending",
@@ -250,6 +260,8 @@ function loadStoredInventory() {
       ip: equipment.ip || "",
       adminUser: equipment.adminUser || "",
       adminPassword: equipment.adminPassword || "",
+      totalPorts: equipment.totalPorts || "",
+      occupiedPorts: equipment.occupiedPorts || "",
     }));
     const validEquipmentIds = new Set(equipments.map((equipment) => equipment.id));
 
@@ -297,15 +309,29 @@ function loadStoredInventory() {
 
 function getInventorySnapshot(equipments, cameras, unusedCameras, statusOptions, checklistItems) {
   return {
-    equipments: equipments.map(({ id, type, name, location, ip, adminUser, adminPassword }) => ({
-      id,
-      type,
-      name,
-      location,
-      ip,
-      adminUser,
-      adminPassword,
-    })),
+    equipments: equipments.map(
+      ({
+        id,
+        type,
+        name,
+        location,
+        ip,
+        adminUser,
+        adminPassword,
+        totalPorts,
+        occupiedPorts,
+      }) => ({
+        id,
+        type,
+        name,
+        location,
+        ip,
+        adminUser,
+        adminPassword,
+        totalPorts,
+        occupiedPorts,
+      })
+    ),
     cameras: cameras.map(({ id, name, location, equipmentId, statusOptionIds, checks }) => ({
       id,
       name,
@@ -498,6 +524,8 @@ export default function CameraChecklistApp() {
       ip: "",
       adminUser: "",
       adminPassword: "",
+      totalPorts: "",
+      occupiedPorts: "",
     };
 
     setEquipments((prev) => [
@@ -704,6 +732,12 @@ export default function CameraChecklistApp() {
         equipmentIp: equipment?.ip || "Não informado",
         equipmentAdminUser: equipment?.adminUser || "Não informado",
         equipmentAdminPassword: equipment?.adminPassword || "Não informado",
+        equipmentTotalPorts: equipment?.totalPorts || "Não informado",
+        equipmentOccupiedPorts: equipment?.occupiedPorts || "Não informado",
+        equipmentAvailablePorts:
+          availablePorts(equipment) === null ? "Não informado" : availablePorts(equipment),
+        equipmentHasAvailablePorts:
+          availablePorts(equipment) === null ? "Não informado" : availablePorts(equipment) > 0 ? "Sim" : "Não",
         customStatus: statusOptionLabels(cam.statusOptionIds).join(" | ") || "Não selecionado",
         status: compliant ? "OK" : "NÃO CONFORME",
         checklist: checklistSummary(cam),
@@ -726,6 +760,10 @@ export default function CameraChecklistApp() {
       "IP DVR/NVR",
       "Usuário admin",
       "Senha",
+      "Portas totais DVR/NVR",
+      "Portas ocupadas DVR/NVR",
+      "Portas disponíveis DVR/NVR",
+      "Há portas disponíveis",
       "Status pronto",
       "Status Geral",
       "Itens checados",
@@ -747,6 +785,10 @@ export default function CameraChecklistApp() {
           row.equipmentIp,
           row.equipmentAdminUser,
           row.equipmentAdminPassword,
+          row.equipmentTotalPorts,
+          row.equipmentOccupiedPorts,
+          row.equipmentAvailablePorts,
+          row.equipmentHasAvailablePorts,
           row.customStatus,
           row.status,
           row.checklist,
@@ -768,6 +810,10 @@ export default function CameraChecklistApp() {
           cam.name,
           cam.previousSector || "Não informado",
           "Não atribuído",
+          "Não aplicado",
+          "Não aplicado",
+          "Não aplicado",
+          "Não aplicado",
           "Não aplicado",
           "Não aplicado",
           "Não aplicado",
@@ -858,11 +904,13 @@ export default function CameraChecklistApp() {
               .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; }
               .equipment-title { font-size: 13px; font-weight: 800; margin: 0; }
               .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 10px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
-              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: 1.2fr 1fr 1.4fr; font-size: 11px; margin-bottom: 12px; }
+              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); font-size: 11px; margin-bottom: 12px; }
               .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 8px 10px; }
               .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
               .equipment-access { display: grid; gap: 4px; }
               .equipment-access span { display: block; }
+              .equipment-port-list { display: grid; gap: 4px; }
+              .equipment-port-list span { display: block; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
               .unused-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 11px 12px; }
               @media print { body { background: #ffffff; } .page { padding: 22px 0 0; } .cover { margin: -16mm -16mm 0; width: calc(100% + 32mm); } }
@@ -911,6 +959,15 @@ export default function CameraChecklistApp() {
                               <div class="equipment-details">
                                 <div class="equipment-detail"><strong>Local</strong>${escapeHtml(equipment.location || "Não informado")}</div>
                                 <div class="equipment-detail"><strong>IP</strong>${escapeHtml(equipment.ip || "Não informado")}</div>
+                                <div class="equipment-detail">
+                                  <strong>Portas</strong>
+                                  <div class="equipment-port-list">
+                                    <span><b>Total:</b> ${escapeHtml(equipment.totalPorts || "Não informado")}</span>
+                                    <span><b>Ocupadas:</b> ${escapeHtml(equipment.occupiedPorts || "Não informado")}</span>
+                                    <span><b>Disponíveis:</b> ${availablePorts(equipment) === null ? "Não informado" : escapeHtml(availablePorts(equipment))}</span>
+                                    <span><b>Há disponibilidade:</b> ${availablePorts(equipment) === null ? "Não informado" : availablePorts(equipment) > 0 ? "Sim" : "Não"}</span>
+                                  </div>
+                                </div>
                                 <div class="equipment-detail">
                                   <strong>Acesso</strong>
                                   <div class="equipment-access">
@@ -1016,15 +1073,29 @@ export default function CameraChecklistApp() {
 
   function saveTemplate() {
     const template = {
-      equipments: equipments.map(({ id, type, name, location, ip, adminUser, adminPassword }) => ({
-        id,
-        type,
-        name,
-        location,
-        ip,
-        adminUser,
-        adminPassword,
-      })),
+      equipments: equipments.map(
+        ({
+          id,
+          type,
+          name,
+          location,
+          ip,
+          adminUser,
+          adminPassword,
+          totalPorts,
+          occupiedPorts,
+        }) => ({
+          id,
+          type,
+          name,
+          location,
+          ip,
+          adminUser,
+          adminPassword,
+          totalPorts,
+          occupiedPorts,
+        })
+      ),
       cameras: cameras.map(({ name, location, equipmentId, statusOptionIds }) => ({
         name,
         location,
@@ -1060,6 +1131,8 @@ export default function CameraChecklistApp() {
           ip: equipment.ip || "",
           adminUser: equipment.adminUser || "",
           adminPassword: equipment.adminPassword || "",
+          totalPorts: equipment.totalPorts || "",
+          occupiedPorts: equipment.occupiedPorts || "",
         }));
     const safeEquipments = templateEquipments.length ? templateEquipments : [];
     const validEquipmentIds = new Set(safeEquipments.map((equipment) => equipment.id));
@@ -1355,6 +1428,49 @@ export default function CameraChecklistApp() {
                           })
                         }
                         placeholder="Senha de acesso"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <label className="space-y-1">
+                      <span className={labelClass}>Portas totais</span>
+                      <input
+                        className={fieldClass}
+                        type="number"
+                        min="0"
+                        value={selectedEquipment.totalPorts || ""}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { totalPorts: e.target.value })
+                        }
+                        placeholder="Ex: 16"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>Portas ocupadas</span>
+                      <input
+                        className={fieldClass}
+                        type="number"
+                        min="0"
+                        value={selectedEquipment.occupiedPorts || ""}
+                        onChange={(e) =>
+                          updateEquipment(selectedEquipment.id, { occupiedPorts: e.target.value })
+                        }
+                        placeholder="Ex: 12"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className={labelClass}>Portas disponíveis</span>
+                      <input
+                        className={`${fieldClass} opacity-80`}
+                        value={
+                          availablePorts(selectedEquipment) === null
+                            ? "Informe total e ocupadas"
+                            : `${availablePorts(selectedEquipment)} porta(s) - ${
+                                availablePorts(selectedEquipment) > 0 ? "Sim" : "Não"
+                              }`
+                        }
+                        readOnly
                       />
                     </label>
                   </div>
