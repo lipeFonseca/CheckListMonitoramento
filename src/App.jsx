@@ -49,9 +49,6 @@ const SETTINGS_IMAGE_DB = "cameraChecklistImageSettings";
 const SETTINGS_IMAGE_STORE = "settings";
 const SETTINGS_IMAGE_KEY = "images";
 const SETTINGS_IMAGE_FALLBACK_KEY = "cameraChecklistImageSettingsFallback";
-const CAMERA_IMAGE_DB = "cameraChecklistCameraImages";
-const CAMERA_IMAGE_STORE = "cameraImages";
-const CAMERA_IMAGE_KEY = "imagesByCamera";
 
 function repairLegacyText(value) {
   if (typeof value !== "string") return value;
@@ -172,61 +169,6 @@ async function saveStoredImageSettings(images) {
   }
 }
 
-function openCameraImageDb() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(CAMERA_IMAGE_DB, 1);
-
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore(CAMERA_IMAGE_STORE);
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function loadStoredCameraImages() {
-  try {
-    const db = await openCameraImageDb();
-    return await new Promise((resolve, reject) => {
-      const transaction = db.transaction(CAMERA_IMAGE_STORE, "readonly");
-      const store = transaction.objectStore(CAMERA_IMAGE_STORE);
-      const request = store.get(CAMERA_IMAGE_KEY);
-
-      request.onsuccess = () => resolve(request.result || {});
-      request.onerror = () => reject(request.error);
-      transaction.oncomplete = () => db.close();
-    });
-  } catch (error) {
-    console.error("Erro ao carregar imagens das câmeras:", error);
-    return {};
-  }
-}
-
-async function saveStoredCameraImages(cameras) {
-  const imagesByCamera = Object.fromEntries(
-    cameras
-      .filter((cam) => Array.isArray(cam.images) && cam.images.length)
-      .map((cam) => [cam.id, cam.images])
-  );
-  const db = await openCameraImageDb();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(CAMERA_IMAGE_STORE, "readwrite");
-    const store = transaction.objectStore(CAMERA_IMAGE_STORE);
-    const request = store.put(imagesByCamera, CAMERA_IMAGE_KEY);
-
-    request.onerror = () => reject(request.error);
-    transaction.oncomplete = () => {
-      db.close();
-      resolve();
-    };
-    transaction.onerror = () => {
-      db.close();
-      reject(transaction.error);
-    };
-  });
-}
-
 function getSettingsMetadata(settings) {
   const { logo, headerImage, favicon, ...metadata } = settings;
   return metadata;
@@ -251,7 +193,7 @@ function createCameraState(cam, index = 0) {
         : [],
     checks: { ...legacyChecks, ...(cam.checks || {}) },
     notes: "",
-    images: Array.isArray(cam.images) ? cam.images : [],
+    images: [],
     openImages: false,
   };
 }
@@ -409,7 +351,6 @@ export default function CameraChecklistApp() {
   const [checklistItems, setChecklistItems] = useState(initialInventory.checklistItems);
   const [settings, setSettings] = useState(loadStoredSettings);
   const [settingsReady, setSettingsReady] = useState(false);
-  const [cameraImagesReady, setCameraImagesReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState("");
 
@@ -430,30 +371,6 @@ export default function CameraChecklistApp() {
     }
 
     loadSettings();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadCameraImages() {
-      const imagesByCamera = await loadStoredCameraImages();
-
-      if (!active) return;
-
-      setCameras((prev) =>
-        prev.map((cam) => ({
-          ...cam,
-          images: imagesByCamera[cam.id] || cam.images || [],
-        }))
-      );
-      setCameraImagesReady(true);
-    }
-
-    loadCameraImages();
 
     return () => {
       active = false;
@@ -511,15 +428,6 @@ export default function CameraChecklistApp() {
       console.error("Erro ao salvar cadastro:", error);
     }
   }, [equipments, cameras, unusedCameras, statusOptions, checklistItems]);
-
-  useEffect(() => {
-    if (!cameraImagesReady) return;
-
-    saveStoredCameraImages(cameras).catch((error) => {
-      console.error("Erro ao salvar imagens das câmeras:", error);
-      alert("Não foi possível salvar as imagens das câmeras. Tente usar arquivos menores.");
-    });
-  }, [cameras, cameraImagesReady]);
 
   useEffect(() => {
     saveChecklistItems(checklistItems);
