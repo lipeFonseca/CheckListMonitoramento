@@ -1274,10 +1274,10 @@ export default function CameraChecklistApp() {
         />
 
         <div className="grid gap-4 md:grid-cols-5">
-          <SummaryCard title="Total de câmeras" value={summary.total} theme={settings.theme} />
-          <SummaryCard title="Em conformidade" value={summary.compliant} theme={settings.theme} />
+          <SummaryCard title="Total" value={summary.total} theme={settings.theme} />
+          <SummaryCard title="Conformes" value={summary.compliant} theme={settings.theme} />
           <SummaryCard
-            title="Requer Atenção"
+            title="Não conformes"
             value={summary.nonCompliant}
             theme={settings.theme}
           />
