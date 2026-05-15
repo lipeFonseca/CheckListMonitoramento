@@ -867,7 +867,7 @@ export default function CameraChecklistApp() {
               .report-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
               .brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
               .logo { display: flex; align-items: center; justify-content: center; }
-              .logo-framed { min-width: 150px; min-height: 78px; max-width: 210px; max-height: 92px; padding: 12px 18px; background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16); }
+              .logo-framed { min-width: 150px; min-height: 78px; max-width: 210px; max-height: 92px; padding: 12px 18px; background: #0f172a !important; border: 1px solid #1e293b; border-radius: 14px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .logo img { max-width: 100%; max-height: 72px; object-fit: contain; }
               h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
               .subtitle { margin: 4px 0 0; color: #64748b; font-size: 12px; }
