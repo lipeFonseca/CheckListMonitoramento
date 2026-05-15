@@ -942,7 +942,7 @@ export default function CameraChecklistApp() {
               <section class="summary">
                 <div class="box"><strong>Total</strong><span>${summary.total}</span></div>
                 <div class="box"><strong>Conformes</strong><span>${summary.compliant}</span></div>
-                <div class="box"><strong>Não conformes</strong><span>${summary.nonCompliant}</span></div>
+                <div class="box"><strong>Necessita de atenção</strong><span>${summary.nonCompliant}</span></div>
                 <div class="box"><strong>DVR/NVR</strong><span>${summary.equipments}</span></div>
                 <div class="box"><strong>Fora de uso</strong><span>${summary.unused}</span></div>
               </section>
@@ -1277,7 +1277,7 @@ export default function CameraChecklistApp() {
           <SummaryCard title="Total" value={summary.total} theme={settings.theme} />
           <SummaryCard title="Conformes" value={summary.compliant} theme={settings.theme} />
           <SummaryCard
-            title="Não conformes"
+            title="Necessita de atenção"
             value={summary.nonCompliant}
             theme={settings.theme}
           />
