@@ -905,14 +905,14 @@ export default function CameraChecklistApp() {
               .equipment-list { display: grid; gap: 10px; grid-template-columns: 1fr; margin-bottom: 18px; }
               .equipment-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; page-break-inside: avoid; }
               .equipment-head { align-items: center; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; }
-              .equipment-title { font-size: 12px; font-weight: 800; margin: 0; }
-              .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 10px; font-weight: 800; padding: 5px 9px; white-space: nowrap; }
-              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px; }
-              .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; min-height: 80px; padding: 8px 9px; }
-              .equipment-detail strong { color: #64748b; display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
-              .equipment-access { display: grid; gap: 4px; }
+              .equipment-title { font-size: 13px; font-weight: 800; margin: 0; }
+              .equipment-count { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; color: #334155; font-size: 11px; font-weight: 800; padding: 5px 10px; white-space: nowrap; }
+              .equipment-details { color: #334155; display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 12px; }
+              .equipment-detail { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; min-height: 72px; padding: 10px 11px; }
+              .equipment-detail strong { color: #64748b; display: block; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
+              .equipment-access { display: grid; gap: 5px; }
               .equipment-access span { display: block; }
-              .equipment-port-list { display: grid; gap: 4px; }
+              .equipment-port-list { display: grid; gap: 5px; }
               .equipment-port-list span { display: block; }
               .unused-list { display: grid; gap: 8px; margin-top: 10px; }
               .unused-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 11px 12px; }
